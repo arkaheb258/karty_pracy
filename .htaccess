@@ -1,0 +1,7 @@
+Options +FollowSymLinks
+RewriteEngine On
+	RewriteRule ^lib/(.+)$ /lib/$1
+	RewriteRule ^images/(.+)$ /images/$1
+	RewriteRule ^scripts/(.+)$ /scripts/$1
+	RewriteRule 			^jquery.min.js$ /lib/jquery-1.9.1.min.js
+	RewriteRule 			^jquery-ui.min.js$ /lib/jquery-ui-1.10.2.min.js
