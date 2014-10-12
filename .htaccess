@@ -1,7 +1,29 @@
 Options +FollowSymLinks
 RewriteEngine On
-	RewriteRule ^lib/(.+)$ /lib/$1
-	RewriteRule ^images/(.+)$ /images/$1
-	RewriteRule ^scripts/(.+)$ /scripts/$1
-	RewriteRule 			^jquery.min.js$ /lib/jquery-1.9.1.min.js
-	RewriteRule 			^jquery-ui.min.js$ /lib/jquery-ui-1.10.2.min.js
+	RewriteRule ^$ 						lista.php
+	RewriteRule ^lib/(.+)$ 				/lib/$1
+	RewriteRule ^images/(.+)$ 		/images/$1
+	RewriteRule ^scripts/(.+)$ 		/scripts/$1
+	RewriteRule 	^jquery.min.js$ 				/lib/jquery-1.9.1.min.js
+	RewriteRule 	^jquery-ui.min.js$ 			/lib/jquery-ui-1.10.2.min.js
+
+	RewriteRule 	^jquery-ui.css$							/lib/css/jquery-ui.css
+	RewriteRule 	^kopex.css$								/lib/css/kopex.css
+#	RewriteRule 	^demo_table.css$					/raporty_tr/demo_table.css
+#	RewriteRule 	^baza_karta.php$					/scripts/baza_karta.php
+#	RewriteRule 	^karta_pr.php$						/scripts/karta_pr.php
+#	RewriteRule 	^karta_stat.php$						/scripts/karta_stat.php
+#	RewriteRule 	^jquery.min.js$						/lib/jquery.min.js
+#	RewriteRule 	^jquery-ui.min.js$					/lib/jquery-ui.min.js
+	RewriteRule 	^jquery.dataTables.min.js$		/lib/jquery.dataTables.min.js
+	RewriteRule 	^md5-min.js$							/lib/md5-min.js
+	RewriteRule 	^jquery.ui.datepicker-pl.js$		/lib/jquery.ui.datepicker-pl.js
+	RewriteRule 	^jquery-ui-timepicker-addon.js$		/lib/jquery-ui-timepicker-addon.js
+	RewriteRule 	^date.js$									/lib/date.js
+	RewriteRule 	^globalize.js$							/lib/globalize.js
+	RewriteRule 	^globalize.culture.de-DE.js$		/lib/globalize.culture.de-DE.js
+	
+	RewriteRule 	^logout.php$							/scripts/logout.php
+	RewriteRule 	^login.php$								/scripts/login.php
+	RewriteRule 	^checklogin.php$						/scripts/checklogin.php
+	RewriteRule 	^users.php$								/scripts/users.php

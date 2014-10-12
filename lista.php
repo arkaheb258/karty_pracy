@@ -1,23 +1,29 @@
 ﻿<?php
 session_start();
 if ( !isset( $_SESSION["myusername"] ) ){
-	header("location:/scripts/login.php?url=".$_SERVER["REQUEST_URI"]);
+	header("location:login.php?url=".$_SERVER["REQUEST_URI"]);
 	exit;
 } else {
 	if ($_SESSION['timeout'] + 10 * 60 < time()) {
-		header("location:/scripts/logout.php?session_timeout&url=".$_SERVER["REQUEST_URI"]);
+		header("location:logout.php?session_timeout&reload&url=".$_SERVER["REQUEST_URI"]);
+//		header("location:logout.php?session_timeout&url=".$_SERVER["REQUEST_URI"]);
 		exit;
 	}
 	else $_SESSION['timeout'] = time();
 }
+	$dzial = $_SESSION["myuser"]["dzial"];
+	$dzial = substr($dzial,0,2);
+	$nr = $_SESSION["myuser"]["nr"];
+	if ($nr == 913 || $nr == 914 )
+		$dzial = "TP";
 ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="pl" lang="pl">
 	<head>
 		<meta http-equiv="Content-type" content="text/html; charset=utf-8" />
 		<meta http-equiv="X-UA-Compatible" content="IE=EmulateIE7; IE=EmulateIE9" /> 
-		<link rel="stylesheet" type="text/css" href="/lib/css/jquery-ui.css" />
-		<link rel="stylesheet" type="text/css" href="../raporty_tr/demo_table.css" />
+		<link rel="stylesheet" type="text/css" href="jquery-ui.css" />
+		<link rel="stylesheet" type="text/css" href="demo_table.css" />
 		<style  type="text/css">
 			.unselectable {
 			   -moz-user-select: -moz-none;
@@ -28,41 +34,54 @@ if ( !isset( $_SESSION["myusername"] ) ){
 			}
 			.ui-autocomplete.ui-widget-content { background: white; }
 			.ui-widget-header { 
-				border: 1px solid #000; background: #ea641f url(images/ui-bg_gloss-wave_35_f6a828_500x100.png) 50% 50% repeat-x; color: #fff; font-weight: bold; 
+				border: 1px solid #000; background: #ea641f; color: #fff; font-weight: bold; 
 			}
 			.ui-state-default, .ui-widget-content .ui-state-default, .ui-widget-header .ui-state-default { 
-				border: 1px solid #000; background: #ea641f url(images/ui-bg_glass_100_f6f6f6_1x400.png) 50% 50% repeat-x; font-weight: bold; color: #000; 
+				border: 1px solid #000; background: #ea641f; font-weight: bold; color: #000; 
 			}
 			.ui-state-hover, .ui-widget-content .ui-state-hover, .ui-widget-header .ui-state-hover, .ui-state-focus, .ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus { 
-				border: 1px solid #fff; background: #fdf5ce url(images/ui-bg_glass_100_fdf5ce_1x400.png) 50% 50% repeat-x; font-weight: bold; color: #ea641f; 
+				border: 1px solid #fff; background: #fdf5ce; font-weight: bold; color: #ea641f; 
+			}
+			.ui-dialog .ui-dialog-titlebar-close span{
+				margin: -8px;
+			}
+			.yes_print_ {display: none;}
+			@media print {
+				body {font-size: 12px;}
+				.no_print_ {display: none;}
+				.yes_print_ {display: block;}
+				.dataTables_wrapper {display: none;}
 			}
 		</style>
 		<title>Karty Pracy TR</title>
 	</head>
 	<body>
-		<div id="_header" style="float:right;">		
+		<div id="_header" style="float:right;" class="no_print_">		
 			<div id="instrukcja">Instrukcja obsługi</div>
 			<div id="logout">Wyloguj</div>
 			<div id="change_pass">Zmień hasło</div>
 			Zalogowano jako: <?php echo $_SESSION["myuser"]["nazwa"]; ?>
 		</div>
-		<table cellpadding="0" cellspacing="0" border="0" class="display unselectable" id="dane"></table>
 		<br/>
-		<div style="width:90%">
+		<div style="width:90%" class="no_print_">
 			<div id="add">Dodaj pracę</div>
 			<div id="add_l4">Uzupełnij nieobecności</div>
-<?php
-		if($_SESSION["myuser"]["kart_perm"] != "0" && !isset($_REQUEST["user_id"]))
-			echo '<div id="s_user">Lista parcowników</div>';
-?>
-<?php
-//		if($_SESSION["myuser"]["kart_perm"] == "3" && !isset($_REQUEST["user_id"]))
-//			echo '<div id="s_stat">Statystyki miesiąca</div>';
-?>
+			<div id="s_user" style="display:none;">Lista pracowników</div>
+			<div id="s_zad" style="display:none;">Zadania</div>
 			<div id="s_stat">Statystyki miesiąca</div>
+			<div id="cp_last" style="display:none">Kopiuj</div>
 			<br/>
 			<br/>
 		</div>
+		<table border="0" class="yes_print_" style="width:100%;">
+			<tbody style="width:100%;">
+				<tr><td>Dział <?php echo $dzial; ?></td></tr>
+				<tr><td style="text-align: center; font-size: 2em; font-weight: bold;">KARTA PRACY za miesiąc <span id="druk_miesiac"></span> <span id="druk_rok"></span></td></tr>
+			</tbody>
+		</table>
+		
+		<table cellpadding="0" cellspacing="0" border="1" class="display unselectable" id="dane_sum"></table>
+			<br/>
 		<div id="dialog-form" title="Zmień hasło">
 			<p class="validateTips"></p>
 			<form><fieldset>
@@ -74,33 +93,29 @@ if ( !isset( $_SESSION["myusername"] ) ){
 				<input type="password" name="new_pass_2" id="new_pass_2" value="" class="text ui-widget-content ui-corner-all" />
 			</fieldset></form>
 		</div>		
-		<table cellpadding="0" cellspacing="0" border="1" class="display unselectable" id="dane_sum"></table>
+		<table cellpadding="0" cellspacing="0" border="0" class="display unselectable no_print_" id="dane"></table>
 		<div id="dialog_prace" title="Prace dnia"></div>
+		<script type="text/javascript" src="jquery.min.js"></script>
+		<script type="text/javascript" src="jquery-ui.min.js"></script>
+		<script type="text/javascript" src="jquery.dataTables.min.js"></script>
+		<script type="text/javascript" src="md5-min.js"></script>
 <?php
-	if (isset($_REQUEST["int"])){
-		echo '
-			<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-			<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
-			<script type="text/javascript" src="//datatables.net/release-datatables/media/js/jquery.dataTables.min.js"></script>
-			<script type="text/javascript" src="//pajhome.org.uk/crypt/md5/2.2/md5-min.js"></script>
-			';
+	if (isset($_REQUEST["user_id"]) && $_SESSION["myuser"]["kart_perm"] != "0")  {
+		if (isset($_REQUEST["year"]) && isset($_REQUEST["month"])) 
+			echo '<script type="text/javascript" src="baza_karta.php?user_id='.$_REQUEST["user_id"].'&month='.$_REQUEST["month"].'&year='.$_REQUEST["year"].'"></script>';
+		else	
+			echo '<script type="text/javascript" src="baza_karta.php?user_id='.$_REQUEST["user_id"].'"></script>';
+		echo '<script type="text/javascript">var braki = [];</script>';
 	} else {
-		echo '
-			<script type="text/javascript" src="/lib/jquery.min.js"></script>
-			<script type="text/javascript" src="/lib/jquery-ui.min.js"></script>
-			<script type="text/javascript" src="/lib/jquery.dataTables.min.js"></script>
-			<script type="text/javascript" src="/lib/md5-min.js"></script>
-			';
+		echo '<script type="text/javascript" src="baza_karta.php"></script>
+		<script type="text/javascript" src="braki.php"></script>';
 	}
-	if (isset($_REQUEST["user_id"]) && $_SESSION["myuser"]["kart_perm"] != "0") 
-		echo '<script type="text/javascript" src="/scripts/baza_karta.php?user_id='.$_REQUEST["user_id"].'"></script>';
-	else 
-		echo '<script type="text/javascript" src="/scripts/baza_karta.php"></script>';
-
 ?>
 	<script type="text/javascript">
 		var sum_user_id = <?php if (isset($_REQUEST["user_id"])) echo $_REQUEST["user_id"]; else echo 'null';?>;
-	
+		var _user_id = <?php echo $_SESSION["myuser"]["id"];?>;
+		var _user_perm = <?php echo $_SESSION["myuser"]["kart_perm"];?>;
+		
 		function min_to_h(min){
 			if (min <= 0)
 				return "00:00";
@@ -131,36 +146,79 @@ if ( !isset( $_SESSION["myusername"] ) ){
 		else if (typeof console.log === "undefined")
 			console.log = function(){};
 
+		var suser_link = "<?php
+	if (isset($_REQUEST["user_id"]) && $_SESSION["myuser"]["kart_perm"] != "0") 
+		echo "?user_id=".$_REQUEST["user_id"];
+?>";
+		
+//console.log(suser_link);
+
 		$('#instrukcja').button().click(function(){
 			window.open("instrukcja.pdf");
 		});
 		
 		$('#add').button().click(function(){
-			window.open("karta.php");
+			window.open("karta.php"+suser_link);
 		});
 		$('#add_l4').button().click(function(){
-			window.open("karta_l4.php");
+//			window.open("karta_l4.php");
+			window.open("karta.php?l4"+suser_link.replace("?","&"));
 		});
 		$('#s_user').button().click(function(){
 			window.open("sum.php");
 		});
 		$('#s_stat').button().click(function(){
-			window.open("stat.php");
+			window.open('stat.php'+suser_link);
 		});
 		$('#logout').button().click(function(){
-			window.open("/scripts/logout.php?url=<?php echo $_SERVER["REQUEST_URI"]; ?>","_self");
+			window.open("logout.php?url=<?php echo $_SERVER["REQUEST_URI"]; ?>","_self");
 		});
 		$('#change_pass').button().click(function(){
 			$( "#dialog-form" ).dialog( "open" );
 		});
 		
-		if (sum_user_id != null){
+		$('#cp_last').button().click(function(){
+			var wczoraj = [];
+			for (var k in karty){
+				if (karty[k].data == ostatni)			
+					wczoraj.push(karty[k].prac_id);
+			}
+			var powczoraj = new Date();
+			powczoraj.setTime(ostatni+60*60*24*1000);
+			console.log("kopia z");
+			// console.log(ostatni);
+			console.log(new Date(ostatni));
+			console.log("kopia na");
+			console.log(powczoraj);
+			if (powczoraj.getDay() == 6)
+				powczoraj.setDate(powczoraj.getDate()+2);
+			console.log("wczorajsze id");
+			console.log(wczoraj);
+			for (var w in wczoraj) {
+				var link = "karta.php?copy_id="+wczoraj[w];
+				<?php if (isset($_REQUEST["user_id"])) echo 'link += "&user_id="+'.$_REQUEST["user_id"].';'; ?>
+				link += "&add";
+				link += "&day="+powczoraj.getTime();
+				window.open(link);
+			}
+		});
+		
+		if(false 
+			|| _user_id == 1
+			|| _user_id == 54 	//Szweda
+			|| _user_id == 40 	//Miziak
+			|| _user_id == 33	//Janusz
+		) {
+			$('#cp_last').show();
+		}
+		
+		if (sum_user_id != null && _user_id != 1){
 			$('#add').hide();
 			$('#add_l4').hide();
 			$('#s_user').hide();
 			$('#_header').hide();
 		}
-		
+
 		$(function() {
 			var old_pass = $( "#old_pass" ),
 				new_pass = $( "#new_pass" ),
@@ -227,7 +285,7 @@ if ( !isset( $_SESSION["myusername"] ) ){
 							var obj = {"myusername":<?php echo $_SESSION["myuser"]["nr"];?>,"mypassword":old_pass.val(),"mynewpass":new_pass.val()};
 							var ths = $( this );
 							$.ajax({
-								url: 'scripts/checklogin.php',
+								url: 'checklogin.php',
 								type: 'POST',
 								data: obj,
 								timeout: 1000
@@ -235,7 +293,7 @@ if ( !isset( $_SESSION["myusername"] ) ){
 								if (obj == "OK"){
 									alert('Hasło zostało zmienione.');
 									ths.dialog( "close" );
-									window.open("/scripts/logout.php?reload","_self");
+									window.open("logout.php?reload","_self");
 								} else
 									alert(obj);
 							}).fail( function() {
@@ -254,12 +312,16 @@ if ( !isset( $_SESSION["myusername"] ) ){
 				}
 			});
 		 });
+
 		var aDataSet = [];
-		for (var k in karty){
+		if (karty) for (var k in karty){
 			var karta = karty[k];
 //			console.log(karta);
 			var start = new Date();
 			start.setTime(karta.data);
+<?php if (isset($_REQUEST["month"])) echo "if (start.getMonth()+1 != ".$_REQUEST["month"].") continue;";?>
+			if (start.getHours() == 23)
+				start.setHours(start.getHours()+1);
 			var m = start.getMonth()+1; if (m<10) m = "0"+m; 
 			var d = start.getDate(); if (d<10) d = "0"+d;
 			var h = start.getHours(); if (h<10) h = "0"+h;
@@ -276,6 +338,7 @@ if ( !isset( $_SESSION["myusername"] ) ){
 				karta.prac_id
 			]);
 		}
+		
 		$(document).ready(function() {
 			oTable = $('#dane').dataTable( {
 				"aaData": aDataSet,
@@ -289,6 +352,7 @@ if ( !isset( $_SESSION["myusername"] ) ){
 					{ "sTitle": "Zlecenie / Zamówienie", "sWidth":"10em"},
 					{ "sTitle": "Opis", "sWidth":"20em"}
 				],
+				"aaSorting": [[ 0, "desc" ]],
 				"fnDrawCallback": function( oSettings ) {
 					$("#dane tbody tr:not(.has_dblclick)").dblclick( function( e ) {
 						var ths = $(this); 
@@ -352,9 +416,15 @@ if ( !isset( $_SESSION["myusername"] ) ){
 		}
 
 		var miesiac = ["Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec","Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"];
+
 		var d = new Date();
+//		console.log(d);
+<?php if (isset($_REQUEST["month"])) echo "d.setMonth(".$_REQUEST["month"]."-1);"; ?>
+<?php if (isset($_REQUEST["year"])) echo "d.setFullYear(".$_REQUEST["year"].");"; ?>
 		var daysInMonth = new Date(d.getFullYear(),d.getMonth()+1, 0).getDate()
-		$('#dane_sum').append('<tr><th rowspan=2>L.p.</th><th rowspan=2>Dzial</th><th rowspan=2>Nr zlecenia</th><th rowspan=2>Treść zadania</th><th colspan='+(daysInMonth)+'>Dzień miesiąca ('+miesiac[d.getMonth()]+')</th><th rowspan=2>Suma</th></tr>');
+		$('#dane_sum').append('<tr><th rowspan=2>L.p.</th><th rowspan=2>Dzial</th><th rowspan=2>Nr zlecenia<br/>/ Zadanie</th><th rowspan=2>Treść zadania</th><th colspan='+(daysInMonth)+'>Dzień miesiąca ('+miesiac[d.getMonth()]+')</th><th rowspan=2>Suma</th></tr>');
+		$("#druk_miesiac").text(miesiac[d.getMonth()].toUpperCase());
+		$("#druk_rok").text(d.getFullYear());
 		$('#dane_sum').append('<tr id="fr"></tr>');
 		for (var di=1;di<=daysInMonth;di++){
 			var th = $('<th>'+di+'</th>').appendTo('#fr');
@@ -362,38 +432,50 @@ if ( !isset( $_SESSION["myusername"] ) ){
 				th.css("background-color","gray");
 			if (dayOfMonth(d,di) == 6)
 				th.css("background-color","lightblue");
+			if(swieta[d.getMonth()+1] && swieta[d.getMonth()+1][di])
+				th.css("background-color","LightPink ").attr("title",swieta[d.getMonth()+1][di]);
 		}
 		var suma_dni = {};
 		var suma_kat = {};
+		var ostatni = 0;
 		var zlecenia_all = {};
 		var zlec_iter = 0;
 		for (var k in karty){
 			var karta = karty[k];
-			if(zlecenia_all["_"+karta.zlec] == undefined)
-				zlecenia_all["_"+karta.zlec] = zlec_iter++;
-				
-//console.log(karta);
-//console.log(zlec_iter);
-//console.log(zlecenia_all);
 			var temp_date = new Date();
 			temp_date.setTime(karta.data);
+			if (temp_date.getHours() == 23)
+				temp_date.setHours(temp_date.getHours()+1);
+			if (ostatni < temp_date.getTime())
+				ostatni = temp_date.getTime();
 			if (d.getMonth() != temp_date.getMonth()) continue;
-//			if(!$('#sr_'+karta.kat_id+'[title="'+karta.zlec+'"]').length){
-			if(!$('#sr_'+karta.kat_id+"_"+zlecenia_all["_"+karta.zlec]).length){
-//				console.log('#sr_'+karta.kat_id+"_"+zlecenia_all["_"+karta.zlec]);
-//				$('#dane_sum').append('<tr id="sr_'+karta.kat_id+'"><th class="lp"></th><td>'+karta.dzial+'</td><td>'+karta.zlec+'</td><td>'+karta.kat+'</td></tr>');
-				var tr = $('<tr id="sr_'+karta.kat_id+"_"+zlecenia_all["_"+karta.zlec]+'" title="'+karta.zlec+'"><th class="lp"></th><td>'+karta.dzial+'</td><td>'+karta.zlec+'</td><td>'+karta.kat+'</td></tr>').appendTo('#dane_sum');
+			if (d.getFullYear() != temp_date.getFullYear()) continue;
+			
+			if (karta.zlec == "" && karta.zadanie && zadania[karta.zadanie])
+				karta.zlec2 = zadania[karta.zadanie].nazwa;
+			else
+				karta.zlec2 = karta.zlec;
+			if(zlecenia_all["_"+karta.zlec2] == undefined)
+				zlecenia_all["_"+karta.zlec2] = zlec_iter++;
+				
+//			if(!$('#sr_'+karta.kat_id+'[title="'+karta.zlec2+'"]').length){
+			if(!$('#sr_'+karta.kat_id+"_"+zlecenia_all["_"+karta.zlec2]).length){
+//				console.log('#sr_'+karta.kat_id+"_"+zlecenia_all["_"+karta.zlec2]);
+//				$('#dane_sum').append('<tr id="sr_'+karta.kat_id+'"><th class="lp"></th><td>'+karta.dzial+'</td><td>'+karta.zlec2+'</td><td>'+karta.kat+'</td></tr>');
+				var tr = $('<tr id="sr_'+karta.kat_id+"_"+zlecenia_all["_"+karta.zlec2]+'" title="'+karta.zlec2+'"><th class="lp"></th><td>'+karta.dzial+'</td><td>'+karta.zlec2+'</td><td>'+karta.kat+'</td></tr>').appendTo('#dane_sum');
 				tr.data('id_k',karta.kat_id);
 				tr.data('id_d',karta.id_dzial);
 				for (var di=1;di<=daysInMonth;di++){
-					var td = $('<td class="sr_d" id="sr_'+karta.kat_id+'_'+di+"_"+zlecenia_all["_"+karta.zlec]+'"><span class="val"></span><ul class="menu" style="display:none;"></ul></td>').appendTo('#sr_'+karta.kat_id+"_"+zlecenia_all["_"+karta.zlec]);
+					var td = $('<td class="sr_d" id="sr_'+karta.kat_id+'_'+di+"_"+zlecenia_all["_"+karta.zlec2]+'"><span class="val"></span><ul class="menu" style="display:none;"></ul></td>').appendTo('#sr_'+karta.kat_id+"_"+zlecenia_all["_"+karta.zlec2]);
 					if (dayOfMonth(d,di) == 0)
 						td.css("background-color","gray");
 					if (dayOfMonth(d,di) == 6)
 						td.css("background-color","lightblue");
+					if(swieta[d.getMonth()+1] && swieta[d.getMonth()+1][di])
+						td.css("background-color","LightPink ").attr("title",swieta[d.getMonth()+1][di]);
 				}
 			}
-			var temp2 = $('#sr_'+karta.kat_id+'_'+temp_date.getDate()+"_"+zlecenia_all["_"+karta.zlec]);
+			var temp2 = $('#sr_'+karta.kat_id+'_'+temp_date.getDate()+"_"+zlecenia_all["_"+karta.zlec2]);
 			temp2.css("cursor","pointer").css("text-align","center");
 			var val = $('span',temp2).text()/1;
 			$('span',temp2).text(val+karta.czas/1);
@@ -404,23 +486,23 @@ if ( !isset( $_SESSION["myusername"] ) ){
 				list = temp2.data('id');
 			list.push(karta.prac_id);
 			temp2.data('id',list);
-			if (suma_dni[temp_date.getDate()])
+			if (suma_dni[temp_date.getDate()]) {
 				suma_dni[temp_date.getDate()] += karta.czas/1;
-			else
+			} else {
 				suma_dni[temp_date.getDate()] = karta.czas/1;
-			if (suma_kat[karta.kat_id+"_"+zlecenia_all["_"+karta.zlec]])
-				suma_kat[karta.kat_id+"_"+zlecenia_all["_"+karta.zlec]] += karta.czas/1;
-			else
-				suma_kat[karta.kat_id+"_"+zlecenia_all["_"+karta.zlec]] = karta.czas/1;
-//			}
+			}
+			if (suma_kat[karta.kat_id+"_"+zlecenia_all["_"+karta.zlec2]]) {
+				suma_kat[karta.kat_id+"_"+zlecenia_all["_"+karta.zlec2]] += karta.czas/1;
+			} else {
+				suma_kat[karta.kat_id+"_"+zlecenia_all["_"+karta.zlec2]] = karta.czas/1;
+			}
 		}
 		$(".val").each(function(){
 			var t = $(this).text()/1;
 			if (t > 0)
 				$(this).text(min_to_h2(t));
 		});
-//console.log(zlecenia_all);
-//console.log('x');
+		
 		$('#dialog_prace')
 		.dialog({
 			autoOpen: false,
@@ -436,7 +518,6 @@ if ( !isset( $_SESSION["myusername"] ) ){
 //		});
 		$( ":data(id)" ).click(function(){
 			var id = $(this).data( "id" );
-			console.log('y');
 			$('#dialog_prace').html($('.menu',this).html());
 			$('#dialog_prace').dialog('open');//show();
 //			$('.menu',this).show();
@@ -456,23 +537,95 @@ if ( !isset( $_SESSION["myusername"] ) ){
 //			alert($(this).data( "id" ));
 		});
 		
-//		console.log(suma_kat);
 		$('#dane_sum').append('<tr id="lr"><th>Suma</th><th></th><th></th><th></th></tr>');
 		for (var di=1;di<=daysInMonth;di++){
 			var td = $('<th id="sr_sum_'+di+'"></th>').appendTo('#lr');
-//			console.log(dayOfMonth(d,di));
 			if (dayOfMonth(d,di) == 0)
 				td.css("background-color","gray");
 			if (dayOfMonth(d,di) == 6)
 				td.css("background-color","lightblue");
+			if(swieta[d.getMonth()+1] && swieta[d.getMonth()+1][di])
+				td.css("background-color","LightPink ").attr("title",swieta[d.getMonth()+1][di]);
 		}
+		
+		var suma_przep_pryw = 0;
+		var suma_nadg = 0;
+		var suma_nadg_sw = 0;
+		
+		for (var s in suma_kat){
+			if (s.indexOf("558")==0)
+				suma_przep_pryw += suma_kat[s];
+		}
+		
+		
 		for (var s in suma_dni){
 			$('#sr_sum_'+s).text(min_to_h2(suma_dni[s]));
-			if (suma_dni[s]<480)
-				$('#sr_sum_'+s).css("background-color","yellow");
-			if (suma_dni[s]>480)
-				$('#sr_sum_'+s).css("background-color","red");
+			if (dayOfMonth(d,s)>5 || dayOfMonth(d,s)==0){
+				if (suma_dni[s] > 480)
+					suma_nadg_sw += 480;
+				else
+					suma_nadg_sw += suma_dni[s];
+			}
+			if (sum_user_id == 43){
+				if (suma_dni[s]<420)
+					$('#sr_sum_'+s).css("background-color","yellow");
+				if (suma_dni[s]>420){
+					if (suma_przep_pryw-(suma_dni[s]-420) >= 0)
+						suma_przep_pryw -= (suma_dni[s]-420);
+					else
+						$('#sr_sum_'+s).css("background-color","red");
+				}
+			}
+			else {
+				if (suma_dni[s]<480)
+					$('#sr_sum_'+s).css("background-color","yellow");
+				if (suma_dni[s]>480){
+					if (suma_przep_pryw-(suma_dni[s]-480) >= 0)
+						suma_przep_pryw -= (suma_dni[s]-480);
+					else {
+						$('#sr_sum_'+s).css("background-color","red");
+						suma_nadg += suma_dni[s]-480;
+					}
+				}
+			}
 		}
+		
+		console.log("Nieodpracowanych przepustek: " + suma_przep_pryw/60);
+		console.log("Nadgodzin normalnych: " + suma_nadg/60);
+		console.log("Nadgodzin świątecznych: " + suma_nadg_sw/60);
+		
+		var prev = new Date();
+		var urlop_2014 = 0;
+		var plan_2014 = 0;
+		for (var k in karty){
+			var karta = karty[k];
+			if (karta.kat_id == 545){
+				prev.setTime(karta.data/1);
+				if (prev.getFullYear() == 2014){
+					if (prev > new Date()) {
+						console.log(prev);
+						plan_2014++;
+					} else {
+						urlop_2014++;
+					}
+				}
+			}
+		}
+		if (user_info.urlop_zalegly) {
+			if (user_info.urlop_zalegly >= urlop_2014) {
+				console.log("W bierzącym roku wykorzystano: " + urlop_2014 + " z " + user_info.urlop_zalegly + " dni zaległego urlopu.");
+				urlop_2014 = 0;
+			} else {
+				console.log("W bierzącym roku wykorzystano: " + user_info.urlop_zalegly + " z " + user_info.urlop_zalegly + " dni zaległego urlopu.");
+				urlop_2014 -= user_info.urlop_zalegly;
+			}
+		}
+		console.log("W bierzącym roku wykorzystano: " + urlop_2014 + " z 26 dni urlopu.");
+		console.log("Zaplanowano : " + plan_2014 + " dni urlopu.");
+		if ((26 - urlop_2014 - plan_2014) > 0) {
+			console.log("Pozostało do zaplanowania : " + (26 - urlop_2014 - plan_2014) + " dni urlopu.");
+		}
+		
 		var suma_sum = 0;
 		var lp = 1;
 		$('.lp').each(function(){
@@ -480,10 +633,46 @@ if ( !isset( $_SESSION["myusername"] ) ){
 		});
 		for (var s in suma_kat){
 			$('#sr_'+s).append('<th>'+min_to_h2(suma_kat[s])+'</th>');
-			suma_sum += suma_kat[s];
+			if (s.indexOf("558")!=0)
+				suma_sum += suma_kat[s];
 		}
 		$('#lr').append('<th>'+min_to_h2(suma_sum)+'</th>');
-			
+		
+//		console.log(braki);
+		if (braki && braki.length){
+			var temp_date = new Date();
+			var braki_str = "";
+			for (var b in braki){
+				if (braki[b].ile/1 > 360) continue;
+				temp_date.setTime(braki[b].day);
+				if (braki_str != "")
+					braki_str += "\n\r";
+				braki_str += temp_date.getDate()+"."+(temp_date.getMonth()+1)+"."+temp_date.getFullYear()+"r.";
+				// console.log(temp_date);
+				// console.log(braki[b]);
+			}
+			if (braki_str != ""){
+				console.log("Proszę uzupełnić następujące dni:\n\r"+braki_str);
+			<?php
+				// if (!isset($_REQUEST["user_id"]))
+					// echo 'alert("Proszę uzupełnić następujące dni:\n\r"+braki_str);';
+				// else
+					echo ";";
+			?>
+			}
+		}
+		
+		if(_user_perm>0){
+			$('#s_user').show();
+			$('#s_zad').button().show().click(function(){
+				window.open("zadania.php");
+			});
+		}
+		
+		function lewe_wpisy(){
+			console.log("kasowanie");
+		}
+		
 	</script>
 	</body>
 </html>
