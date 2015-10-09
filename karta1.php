@@ -40,14 +40,9 @@ if ( !isset( $_SESSION["myusername"] ) ){
 			
 			$zadanie = test_req( "zad","NULL");
 			
-			$table = "kart_pr_prace";
+			$table = "wwwkop.dbo.kart_pr_prace";
 			
-			if (substr($id,0,1)=='R'){
-				$id = substr($id,1);
-				$table = "kart_pr_prace_rtr";
-			}
-			
-			$mysqli = new_polacz_z_baza();
+			$conn = polacz_sql();
 			
 			if ($dni != ""){
 				$dzien = explode ( "," , $dni);
@@ -56,135 +51,93 @@ if ( !isset( $_SESSION["myusername"] ) ){
 					$d = $d ."000";
 					if ($query != "")
 						$query .= ",";
-					$query .= "(\"$kto\",\"$co\",\"$ile\",$d,\"$zlecenie\",\"$opis\",\"$t_ip\")";
+					$query .= "('$kto','$co','$ile',$d,'$zlecenie','$opis','$t_ip')";
 				}
-				$query = "INSERT INTO `$table`(`user_id`,`kat_id`, `czas`, `data`, `zlecenie`, `opis`, `ip`) VALUES " .$query .";";
-		//		echo $query;
-				if ($mysqli->query($query))
-					echo json_encode(array('OK',$mysqli->insert_id,'INSERT','Zarejestrowano '.count($dzien)." dni.",0));
-				else echo json_encode(array($mysqli->error,0));
+				$query = "INSERT INTO $table(user_id,kat_id, czas, data, zlecenie, opis, ip) VALUES " .$query .";SELECT SCOPE_IDENTITY() as newId;";
+				
+				$result = sqlsrv_query($conn, $query);
+				if ($result && sqlsrv_rows_affected($result) > 0) {
+					sqlsrv_next_result($result); 
+					$row = get_row_sql($result);
+					echo json_encode(array('OK',$row["newId"],'INSERT','Zarejestrowano '.count($dzien)." dni.",0));
+				} else {
+					echo json_encode(sqlsrv_errors());
+				}
 			} else {
 				$kiedy = test_req( "kiedy" );
 				
 				$t_diff = (new DateTime())->getTimestamp() - $kiedy/1000;
 
-//				session_start();
-				if ($_SESSION["myuser"]["id"] != 1 && $kto != "1" 
-				&& $kto != "33" //Piotr Janusz
-				&& $kto != "40" //Marek Miziak
-				// && $kto != "51" //Andrzej Skrzypiec
-				// && $kto != "11" //Bieniarz
-				// && $kto != "37" //Korczyński Maciej
-				// && $kto != "15" //Lukoszek
-				// && $kto != "28" //Drejka
-				// && $kto != "30" //Forajter
-				// && $kto != "60" //Krystian
-				// && $kto != "53" //Suiski
-				// && $kto != "52" //Skwarek
-				// && $kto != "54" //Szweda
-				// && $kto != "27" //Ćwiklicki Zbigniew
-				// && $kto != "25" //Ciesielski
-				// && $kto != "59" //Kostka
-				&& $t_diff > ($def_days_back+4)*24*60*60){
-					echo json_encode(array('OK',0,'DELETE','Proszę ustawić prawidłową datę',0));
-				} else {
-					$suma_czasu = 0;
-					//pobranie danych o sumie czasu pracy w danym dniu
-					$query = "SELECT SUM( czas ) as suma FROM  `$table` WHERE data = $kiedy AND user_id = $kto";
-					$result = $mysqli->query($query);
-					if($row = $result->fetch_assoc())
-						$suma_czasu = $row['suma'];
-					
-					//odjecie czasu edytowanego wpisu
-					$czas_id = 0;
-					$query = "SELECT czas FROM  `$table` WHERE data = $kiedy AND user_id = $kto AND id = $id";
-					$result = $mysqli->query($query);
-					if($result)
-						if($row = $result->fetch_assoc())
-							$czas_id = $row['czas'];
+				$suma_czasu = 0;
+				//pobranie danych o sumie czasu pracy w danym dniu
+				$query = "SELECT SUM( czas ) as suma FROM  $table WHERE data = $kiedy AND user_id = $kto";
+				$result = sqlsrv_query($conn, $query);
+				if($row = get_row_sql($result))
+					$suma_czasu = $row['suma'];
 				
-					$suma_czasu -= $czas_id;
+				//odjecie czasu edytowanego wpisu
+				$czas_id = 0;
+				$query = "SELECT czas FROM  $table WHERE data = $kiedy AND user_id = $kto AND id = $id";
+				$result = sqlsrv_query($conn, $query);
+				if($result)
+					if($row = get_row_sql($result))
+						$czas_id = $row['czas'];
+			
+				$suma_czasu -= $czas_id;
 
-					//pobranie danych o sumie czasu pracy w dla danego zadania
-					// $query = "SELECT SUM( czas )/60 as czas FROM  `$table` WHERE zadanie = $zadanie AND user_id = $kto";
-					$query = "SELECT SUM( czas )/60 as czas FROM  `$table` WHERE zadanie = $zadanie;";
-					// $query = "SELECT z.rbh, SUM( p.czas ) /60 AS czas FROM  `kart_pr_prace` p LEFT JOIN  `kart_pr_zadania` z ON z.id = p.zadanie WHERE zadanie =1";
-					
-					$result = $mysqli->query($query);
-					if($row = $result->fetch_assoc()){
-						$czas_wyk = $row['czas'];
-					}
-					
-					if ($del){
-						$query = "DELETE FROM `$table` WHERE `$table`.`id` = ".$id.";";
-						if ($mysqli->query($query))
-							echo json_encode(array('OK',$id,'DELETE','Karta skasowana',$suma_czasu));
-						else echo json_encode(array($mysqli->error,0));		
-					} else {
-						
-						$suma_czasu += $ile;
-						if ($id != 'null' && $id != ''){
-							// $query = "UPDATE `$table` SET `user_id` = \"$kto\",`kat_id` = \"$co\", `czas` = \"$ile\", `data` = $kiedy, `zlecenie` = \"$zlecenie\", `opis` = \"$opis\", `ip` = \"$t_ip\", `zadanie` = $zadanie, timestamp = NULL WHERE `$table`.`id` = ".$id.";";
-							$query = "UPDATE `$table` SET `user_id` = \"$kto\",`kat_id` = \"$co\", `czas` = \"$ile\", `data` = $kiedy, `zlecenie` = \"$zlecenie\", `opis` = \"$opis\", `ip` = \"$t_ip\", `zadanie` = $zadanie WHERE `$table`.`id` = ".$id.";";
-		//					echo $query;
-							if ($mysqli->query($query)){
-								if ($mysqli->affected_rows)
-									echo json_encode(array('OK',$id,'UPDATE','Karta poprawiona',$suma_czasu, $czas_wyk));
-								else
-									echo json_encode(array('OK',$id,'UPDATE','Karta bez zmian',$suma_czasu, $czas_wyk));
-							} else echo json_encode(array($mysqli->error,0));
-						}
-						else{
-							$query = "INSERT INTO `$table`(`user_id`,`kat_id`, `czas`, `data`, `zlecenie`, `opis`, `zadanie`, `ip`) VALUES (\"$kto\",\"$co\",\"$ile\",$kiedy,\"$zlecenie\",\"$opis\",$zadanie,\"$t_ip\");";
-							$czas_wyk += $ile/60;
-							if ($mysqli->query($query))
-								echo json_encode(array('OK',$mysqli->insert_id,'INSERT','Praca zarejestrowana',$suma_czasu, $czas_wyk));
-							else echo json_encode(array($mysqli->error,0));
-						}
-					}
-					$file = "log_kp.txt";
-					file_put_contents($file, "data = ".date("c")."\n", FILE_APPEND | LOCK_EX);
-					file_put_contents($file, "userid = ".$_SESSION["myuser"]["id"]."\n", FILE_APPEND | LOCK_EX);
-					file_put_contents($file, $query ."\n", FILE_APPEND | LOCK_EX);
+				//pobranie danych o sumie czasu pracy w dla danego zadania
+				$query = "SELECT SUM( czas )/60 as czas FROM  $table WHERE zadanie = $zadanie;";
+				$result = sqlsrv_query($conn, $query);
+				if($row = get_row_sql($result)){
+					$czas_wyk = $row['czas'];
 				}
+				
+				if ($del){
+					$query = "DELETE FROM $table WHERE $table.id = ".$id.";";
+					$result = sqlsrv_query($conn, $query);
+					if ($result && sqlsrv_rows_affected($result) == 1) {
+						echo json_encode(array('OK',$id,'DELETE','Karta skasowana',$suma_czasu));
+					} else {
+						echo json_encode(sqlsrv_errors());
+					}
+				} else {
+					$suma_czasu += $ile;
+					if ($id != 'null' && $id != ''){
+						$query = "UPDATE $table SET user_id = '$kto', kat_id = '$co', czas = '$ile', data = $kiedy, zlecenie = '$zlecenie', opis = '$opis', ip = '$t_ip', zadanie = $zadanie WHERE $table.id = ".$id.";";
+						$result = sqlsrv_query($conn, $query);
+						if ($result){
+							if (sqlsrv_rows_affected($result) == 1) {
+								echo json_encode(array('OK',$id,'UPDATE','Karta poprawiona',$suma_czasu, $czas_wyk));
+							} else {
+								echo json_encode(array('OK',$id,'UPDATE','Karta bez zmian',$suma_czasu, $czas_wyk));
+							}
+						} else {
+							echo json_encode(sqlsrv_errors());
+						}
+					}
+					else{
+						$query = "INSERT INTO $table (user_id, kat_id, czas, data, zlecenie, opis, zadanie, ip) VALUES ('$kto','$co','$ile',$kiedy,'$zlecenie','$opis',$zadanie,'$t_ip');SELECT SCOPE_IDENTITY() as newId;";
+						$czas_wyk += $ile/60;
+
+						$result = sqlsrv_query($conn, $query);
+						if ($result && sqlsrv_rows_affected($result) == 1) {
+							sqlsrv_next_result($result); 
+							$row = get_row_sql($result);
+							echo json_encode(array('OK',$row["newId"],'INSERT','Praca zarejestrowana',$suma_czasu, $czas_wyk));
+						} else {
+							echo json_encode(sqlsrv_errors());
+						}
+					}
+				}
+				$file = "log_kp.txt";
+				file_put_contents($file, "data = ".date("c")."\n", FILE_APPEND | LOCK_EX);
+				file_put_contents($file, "userid = ".$_SESSION["myuser"]["id"]."\n", FILE_APPEND | LOCK_EX);
+				file_put_contents($file, $query ."\n", FILE_APPEND | LOCK_EX);
 			}
-			$mysqli->close();
 			if (isset($_REQUEST["callback"]) || isset($_REQUEST["jsoncallback"]))
 				echo ')';
 			exit;
 		}
-		switch (getIP()){
-			case "192.168.34.220":	//Ja
-//				header('Location: http://portal.kopex.com.pl/Blokowanie/Blokowanie.html');
-//				exit;
-//				echo $date->getTimestamp();
-//				if ( $date->getTimestamp() >  1373629000 && $date->getTimestamp() <  1373629120){
-//					echo "Strona zablokowana przez Kopex S.A...</br>Pracownik o numerze stałym \"00913\" proszony jest o kontakt z działem IT.";
-//					exit;
-//				}
-			break;
-			case "192.168.34.237":	//Drejka
-//				header('Location: http://portal.kopex.com.pl/Blokowanie/Blokowanie.html');				
-//				exit;
-//				if ( $date->getTimestamp() >  1373629000 && $date->getTimestamp() < 1373629120){
-//					echo "Strona zablokowana przez Kopex S.A...</br>Pracownik o numerze stałym \"00597\" proszony jest o kontakt z działem IT.";
-//					exit;
-//				}
-			break;
-			case "192.168.34.59":	//Kamil				
-//				header('Location: http://portal.kopex.com.pl/Blokowanie/Blokowanie.html');				
-//				exit;
-			break;
-			case "192.168.34.131":	//Kusztal
-//				header('Location: http://portal.kopex.com.pl/Blokowanie/Blokowanie.html');				
-//				exit;
-			break;			
-			case "192.168.34.120":	//Pilch
-//				header('Location: http://portal.kopex.com.pl/Blokowanie/Blokowanie.html');				
-//				exit;
-			break;
-		}
-
 ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="pl" lang="pl">
@@ -217,7 +170,7 @@ if ( !isset( $_SESSION["myusername"] ) ){
   </head>
 	<body>
 		<div style="float:right;font-size: 0.8em;margin-right: 1em;">Zalogowano jako: <?php echo $_SESSION["myuser"]["nazwa"]; ?></div><br/>
-		<form action="baza_karta.php" style="background-image:url(images/logo_km100.png);background-repeat: no-repeat; ">
+		<form action="baza_karta1.php" style="background-image:url(images/logo_km100.png);background-repeat: no-repeat; ">
 			<table style="margin:auto; width: 75%; max-width: 800px;">
 				<colgroup>
 					<col width="250">
@@ -278,9 +231,9 @@ if ( !isset( $_SESSION["myusername"] ) ){
 	</body>
 <?php
 	if (isset($_REQUEST["user_id"]) && $_SESSION["myuser"]["kart_perm"] != "0") 
-		echo '<script type="text/javascript" src="baza_karta.php?user_id='.$_REQUEST["user_id"].'"></script>';
+		echo '<script type="text/javascript" src="baza_karta1.php?user_id='.$_REQUEST["user_id"].'"></script>';
 	else 
-		echo '<script type="text/javascript" src="baza_karta.php"></script>';
+		echo '<script type="text/javascript" src="baza_karta1.php"></script>';
 ?>
 	<script type="text/javascript" src="jquery.min.js"></script>
 	<script type="text/javascript" src="jquery-ui.min.js"></script>
@@ -1011,61 +964,6 @@ if ( !isset( $_SESSION["myusername"] ) ){
 						alert('Proszę podać prawidłową ilość godzin');
 						return;
 					}
-/*					
-					if (obj.zlec.indexOf("900") == 0 || obj.zlec.indexOf("121") == 0){
-						$('#zlec').css("background-color",'red');
-						alert('Numer zamówienia / komisji proszę podawać w formacie "01H900xxxx"');
-						return;				
-					}				
-
-					if (obj.zlec.indexOf("93-40283") == 0 || obj.zlec.indexOf("95-80308") == 0 ){
-						$('#zlec').css("background-color",'red');
-						alert('Numer zamówienia dla kotwiarki to "01H9004259" lub "01H9004260"');
-						return;				
-					}				
-
-					if (obj.zlec.indexOf("SC_ANA") == 0){
-						$('#zlec').css("background-color",'red');
-						alert('Numer zamówienia dla SHUTTLE CAR to "01H9004249"');
-						return;				
-					}				
-
-					if (obj.zlec.indexOf("94-80010") == 0){
-						$('#zlec').css("background-color",'red');
-						alert('KSW-800 należy do "PNU Projekt nr 63"');
-						return;				
-					}				
-
-					if (obj.zlec.indexOf("ikrus") != -1){
-						$('#zlec').css("background-color",'red');
-						alert('GUŁ-500 należy do "PNU Projekt nr 71"');
-						return;				
-					}	
-
-					if (obj.co > 430 && obj.co < 450){
-						if ($("#pnu").val() == "null"){
-							$('#pnu').css("background-color",'red');
-							alert('Proszę wybrać numer projektu');
-							return;						
-						} else {
-							obj.zlec = "PNU Projekt nr "+$("#pnu").val();
-							if ($("#pnu_zad").val() > 0) obj.zlec += '/' + $('#pnu_zad').val().trim();
-							$('#zlec').val(obj.zlec);
-						}
-	//					alert('Proszę wpisać nazwę projektu w formacie "PNU Projekt nr xx"');
-	//					return;				
-					} else if (obj.zlec.indexOf("PNU") == 0 && obj.co != 451){
-						$('#zlec').css("background-color",'red');
-						alert('Dla PNU proszę wybrać kategorię "DRiW / Projekty rozwojowe wg. PNU"');
-						return;				
-					}
-					
-					if (obj.co > 400 && obj.zlec.indexOf("01H900") == 0){
-						$('#dzial').css("background-color",'red');
-						alert('Prace pod konkretną komisję / zamówienie proszę wpisywać w dziale DH');
-						return;				
-					}
-*/
 					
 					if (obj.opis == "" && obj.dzial != 5){
 						$('#opis').css("background-color",'red');
@@ -1077,17 +975,14 @@ if ( !isset( $_SESSION["myusername"] ) ){
 					for (var k in karty){
 						var karta = karty[k];
 						if (obj.kiedy == karta.data/1 && obj.co == karta.kat_id && obj.zlec == karta.zlec){
-							console.log(karta);
-//							console.log(karta.kart_id);
-							console.log(min_to_h2(obj.ile));
+							// console.log(karta);
+							// console.log(karta.kart_id);
+							// console.log(min_to_h2(obj.ile));
 
-							console.log((obj.ile-(obj.ile%60))/60+":"+(obj.ile%60));
-							console.log((karty[k].ile-(karty[k].ile%60))/60+":"+(karty[k].ile%60));
+							// console.log((obj.ile-(obj.ile%60))/60+":"+(obj.ile%60));
+							// console.log((karty[k].ile-(karty[k].ile%60))/60+":"+(karty[k].ile%60));
 							if (confirm("Podana kategoria prac dla danego dnia została już wpisana. Czy chcesz dopisać do karty ?")){
 								obj.id = karta.kart_id;
-	//console.log(karta);
-	//console.log(obj);
-	//console.log(karty[k]);			
 								if (karty[k].opis_p && karty[k].opis_p != obj.opis)
 									obj.opis = karty[k].opis_p + " (" + min_to_h2(karty[k].ile) + ")\n" + obj.opis + " (" + min_to_h2(obj.ile) + ")";
 								obj.ile = karty[k].ile/1 + obj.ile/1;
@@ -1101,22 +996,11 @@ if ( !isset( $_SESSION["myusername"] ) ){
 				temp2 = obj;
 			}
 					
-//			console.log(temp);
-			// console.log(obj);
-			// if (urlop)
-				// console.log("urlop");
-			// else 
-				// console.log("nie urlop");
-
-//return;
-// console.log(obj);
-// console.log(del);
 			if (urlop)
 				window.open("urlop.php?opis="+temp2.opis+"&od="+temp2.od_kiedy/1000+"&do="+temp2.do_kiedy/1000+"&id="+sum_user_id,"_self");
 			else
 				$.ajax({
-//					url: 'http://192.168.34.17:88/scripts/karta_pr.php?callback=?',
-					url: 'karta.php?callback=?',
+					url: 'karta1.php?callback=?',
 					dataType: 'json',
 					type: 'POST',
 					data: obj,
@@ -1125,11 +1009,9 @@ if ( !isset( $_SESSION["myusername"] ) ){
 					if (obj[0]=="OK"){
 						if (window.opener)
 							window.opener.location.reload();
-			// console.log(temp);
 						if (temp)
 							karty.push(temp);
 						if ($('#zad').val() && zadania[$('#zad').val()] && (zadania[$('#zad').val()].rbh > 0)){
-							// console.log(zadania[$('#zad').val()].rbh/1);
 							console.log(obj);
 							if (zadania[$('#zad').val()].rbh/1 < obj[5]/1) {
 								alert('Czas przeznaczony na to zadanie został przekroczony o ' + (obj[5] - zadania[$('#zad').val()].rbh).toFixed(2) + 'h.')
@@ -1144,19 +1026,13 @@ if ( !isset( $_SESSION["myusername"] ) ){
 						if (temp2.co == 545 && confirm( obj[3]+'\n\rCzy chcesz wydrukować kartę urlopową ?')){
 							if (temp2.od_kiedy && temp2.do_kiedy)
 								window.open("urlop.php?opis="+temp2.opis+"&od="+temp2.od_kiedy/1000+"&do="+temp2.do_kiedy/1000,"_self");
-								// window.open("urlop.php?opis="+temp2.opis+"&od="+temp2.od_kiedy/1000+"&do="+temp2.do_kiedy/1000+"&id="+_prac_id,"_self");
 							else
 								window.open("urlop.php?opis="+temp2.opis+"&od="+temp2.kiedy/1000+"&do="+temp2.kiedy/1000,"_self");
-								// window.open("urlop.php?opis="+temp2.opis+"&od="+temp2.kiedy/1000+"&do="+temp2.kiedy/1000+"&id="+_prac_id,"_self");
 						}
 						else if (<?php if (isset($_REQUEST["add"])) echo "true"; else echo "false";?>) {
 							open(location, '_self').close();
 						} else if (confirm(obj[3]+'\n\rCzy chcesz zamknąć kartę ?'))
 							window.close();
-//							window.open("lista.php","_self");
-//						else
-//							window.open("karta.php","_self");
-//							window.open("karta.php?id="+obj[1],"_self");
 					} else
 						alert('Błąd skryptu.');
 				}).fail( function() {

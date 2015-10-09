@@ -1,4 +1,5 @@
 ﻿<?php
+	exit;
 	require_once ('conf.php');
 	$mysqli = new_polacz_z_baza();
 	$query = "SELECT max(timestamp) as t FROM `kart_pr_prace_rtr`";

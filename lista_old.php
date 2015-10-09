@@ -105,6 +105,7 @@ if ( !isset( $_SESSION["myusername"] ) ){
 			echo '<script type="text/javascript" src="baza_karta.php?user_id='.$_REQUEST["user_id"].'&month='.$_REQUEST["month"].'&year='.$_REQUEST["year"].'"></script>';
 		else	
 			echo '<script type="text/javascript" src="baza_karta.php?user_id='.$_REQUEST["user_id"].'"></script>';
+		echo '<script type="text/javascript">var braki = [];</script>';
 	} else {
 		if (isset($_REQUEST["month"])){
 			echo '<script type="text/javascript" src="baza_karta.php?month='.$_REQUEST["month"];
@@ -112,6 +113,7 @@ if ( !isset( $_SESSION["myusername"] ) ){
 			echo '"></script>';
 		} else	
 			echo '<script type="text/javascript" src="baza_karta.php"></script>';
+		echo '<script type="text/javascript" src="braki.php"></script>';
 	}
 ?>
 	<script type="text/javascript">
@@ -470,14 +472,14 @@ if ( !isset( $_SESSION["myusername"] ) ){
 				karta.zlec2 = zadania[karta.zadanie].nazwa;
 			else
 				karta.zlec2 = karta.zlec;
-			if(zlecenia_all[karta.zlec+"_"+karta.zlec2] == undefined)
-				zlecenia_all[karta.zlec+"_"+karta.zlec2] = zlec_iter++;
+			if(zlecenia_all["_"+karta.zlec2] == undefined)
+				zlecenia_all["_"+karta.zlec2] = zlec_iter++;
 				
 //			if(!$('#sr_'+karta.kat_id+'[title="'+karta.zlec2+'"]').length){
-			if(!$('#sr_'+karta.kat_id+"_"+zlecenia_all[karta.zlec+"_"+karta.zlec2]).length){
-//				console.log('#sr_'+karta.kat_id+"_"+zlecenia_all[karta.zlec+"_"+karta.zlec2]);
+			if(!$('#sr_'+karta.kat_id+"_"+zlecenia_all["_"+karta.zlec2]).length){
+//				console.log('#sr_'+karta.kat_id+"_"+zlecenia_all["_"+karta.zlec2]);
 //				$('#dane_sum').append('<tr id="sr_'+karta.kat_id+'"><th class="lp"></th><td>'+karta.dzial+'</td><td>'+karta.zlec2+'</td><td>'+karta.kat+'</td></tr>');
-				var tr = $('<tr id="sr_'+karta.kat_id+"_"+zlecenia_all[karta.zlec+"_"+karta.zlec2]+'"><th class="lp"></th><td>'+karta.dzial+'</td><td class="czyn">'+karta.zlec2+'</td><td>'+karta.kat+'</td></tr>').appendTo('#dane_sum');
+				var tr = $('<tr id="sr_'+karta.kat_id+"_"+zlecenia_all["_"+karta.zlec2]+'"><th class="lp"></th><td>'+karta.dzial+'</td><td class="czyn">'+karta.zlec2+'</td><td>'+karta.kat+'</td></tr>').appendTo('#dane_sum');
 				// console.log($('.czyn',tr));
 				if (_user_perm > 0) {
 					$('.czyn',tr).data('id_zad',karta.zadanie).dblclick(function(){
@@ -504,7 +506,7 @@ if (karta.zadanie){
 				tr.data('id_k',karta.kat_id);
 				tr.data('id_d',karta.id_dzial);
 				for (var di=1;di<=daysInMonth;di++){
-					var td = $('<td class="sr_d" id="sr_'+karta.kat_id+'_'+di+"_"+zlecenia_all[karta.zlec+"_"+karta.zlec2]+'"><span class="val"></span><ul class="menu" style="display:none;"></ul></td>').appendTo('#sr_'+karta.kat_id+"_"+zlecenia_all[karta.zlec+"_"+karta.zlec2]);
+					var td = $('<td class="sr_d" id="sr_'+karta.kat_id+'_'+di+"_"+zlecenia_all["_"+karta.zlec2]+'"><span class="val"></span><ul class="menu" style="display:none;"></ul></td>').appendTo('#sr_'+karta.kat_id+"_"+zlecenia_all["_"+karta.zlec2]);
 					if (dayOfMonth(d,di) == 0)
 						td.css("background-color","gray");
 					if (dayOfMonth(d,di) == 6)
@@ -513,7 +515,7 @@ if (karta.zadanie){
 						td.css("background-color","LightPink ").attr("title",swieta[d.getMonth()+1][di]);
 				}
 			}
-			var temp2 = $('#sr_'+karta.kat_id+'_'+temp_date.getDate()+"_"+zlecenia_all[karta.zlec+"_"+karta.zlec2]);
+			var temp2 = $('#sr_'+karta.kat_id+'_'+temp_date.getDate()+"_"+zlecenia_all["_"+karta.zlec2]);
 			temp2.css("cursor","pointer").css("text-align","center");
 			var val = $('span',temp2).text()/1;
 			$('span',temp2).text(val+karta.czas/1);
@@ -554,10 +556,10 @@ if (karta.zadanie){
 			} else {
 				suma_dni[temp_date.getDate()] = karta.czas/1;
 			}
-			if (suma_kat[karta.kat_id+"_"+zlecenia_all[karta.zlec+"_"+karta.zlec2]]) {
-				suma_kat[karta.kat_id+"_"+zlecenia_all[karta.zlec+"_"+karta.zlec2]] += karta.czas/1;
+			if (suma_kat[karta.kat_id+"_"+zlecenia_all["_"+karta.zlec2]]) {
+				suma_kat[karta.kat_id+"_"+zlecenia_all["_"+karta.zlec2]] += karta.czas/1;
 			} else {
-				suma_kat[karta.kat_id+"_"+zlecenia_all[karta.zlec+"_"+karta.zlec2]] = karta.czas/1;
+				suma_kat[karta.kat_id+"_"+zlecenia_all["_"+karta.zlec2]] = karta.czas/1;
 			}
 		}
 		$(".val").each(function(){
@@ -704,6 +706,31 @@ if (karta.zadanie){
 				suma_sum += suma_kat[s];
 		}
 		$('#lr').append('<th>'+min_to_h2(suma_sum)+'</th>');
+		
+//		console.log(braki);
+		if (braki && braki.length){
+			var temp_date = new Date();
+			var braki_str = "";
+			for (var b in braki){
+				if (braki[b].ile/1 > 360) continue;
+				temp_date.setTime(braki[b].day/1 + 24*60*60*1000);
+//				console.log(braki[b].day);
+				if (braki_str != "")
+					braki_str += "\n\r";
+				braki_str += temp_date.getDate()+"."+(temp_date.getMonth()+1)+"."+temp_date.getFullYear()+"r.";
+				// console.log(temp_date);
+				// console.log(braki[b]);
+			}
+			if (braki_str != ""){
+//				console.log("Proszę uzupełnić następujące dni:\n\r"+braki_str);
+			<?php
+				// if (!isset($_REQUEST["user_id"]))
+					// echo 'alert("Proszę uzupełnić następujące dni:\n\r"+braki_str);';
+				// else
+					echo ";";
+			?>
+			}
+		}
 		
 		if(_user_perm>0){
 			$('#s_user').show();

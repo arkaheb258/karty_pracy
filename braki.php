@@ -29,13 +29,15 @@
 		return "";
 	}
 
-	function s_fun($a,$b,$c){
+	function s_fun_ex($a,$b,$c){
 		global $swieta;
-//		$bb = $b/1000 - (Date("Z",$b/1000)/1 - 7200);
-		$bb = $b/1000 - (Date("Z",$b/1000)/1 - 3600);
+//		$bb = $b/1000 - (Date("Z",$b/1000)/1 - 7200);	//czas zimowy
+		$bb = $b/1000 - (Date("Z",$b/1000)/1 - 3600);	//czas letni
 //		echo (($bb % (24*60*60))/60/60)."<>";
 		if ((($bb % (24*60*60))/60/60) == 21)
 			$bb += 60*60;
+//		if ((($bb % (24*60*60))/60/60) == 23)
+//			$bb -= 60*60;
 		if (isset( $swieta[Date("n",$bb)] ) && isset( $swieta[Date("n",$bb)][Date("j",$bb)]))
 			return "";
 		if (Date("N",$bb)/1 < 6){
@@ -44,21 +46,38 @@
 		return "";
 	}
 	
-	
+	function s_fun($a,$b,$c){
+		global $swieta;
+		$bb = $b/1000;// - (Date("Z",$b/1000)/1 - 3600);
+		$bb += 2*60*60;
+		if (isset( $swieta[Date("n",$bb)] ) && isset( $swieta[Date("n",$bb)][Date("j",$bb)]))
+			return "";
+		if (Date("N",$bb)/1 < 6){
+			return $bb."000";	//niwelacja czasu zimowego
+		}
+		return "";
+	}
+
 	$t = time();
 	$t -= $t % (60*60*24);
-	$t -= Date("Z");
-	$od = $t - (Date("d")/1 - 1) *(60*60*24);
-	$od = $od - 30 *(60*60*24);
+//	if ($user_id == 1) echo $t;
+//	$t -= Date("Z");
+	$od = $t - (Date("d")/1 - 1) *(60*60*24);	//pierwszy kazdego miesiaca
+	$od -= 30 *(60*60*24);
+//	if ($user_id == 1) echo $od;
 	$t -= (60*60*24);	//do przedwczoraj
 	$do = $t;
+
+	$od -= (60*60*2);	//korekta dla starej funkcji "dla_kazdego_dnia"
+//	if ($user_id == 1) echo $do;
 	
 //	if ($user_id == 1) echo "od=".$od;
-	$od -= Date("Z",$od);//-Date("Z");  //korekta strefy czasowej na przełomie
+//	$od -= Date("Z",$od);//-Date("Z");  //korekta strefy czasowej na przełomie
 //	echo Date("Z",$od);
 //	echo Date("Z");
 
 //	if ($user_id == 1) echo "od=".Date("Z",$od);
+//	if ($user_id == 1) echo "  ";
 //	if ($user_id == 1) echo "od=".$od;
 //	if ($user_id == 1) echo "do=".$do;
 
@@ -75,7 +94,7 @@
 
 	$days = dla_kazdego_dnia($od*1000,$do*1000,"s_fun");
 	
-// if ($user_id == 1)	var_dump($days);
+ // if ($user_id == 1)	var_dump($days);
 	
 	$query = 
 		"SELECT nazwa, dzial, day, ile FROM ("
@@ -86,14 +105,15 @@
 						." AND id = ".$user_id
 					.") ids"
 			.") di LEFT JOIN ("
-				."SELECT user_id, data, sum(czas) as ile FROM `kart_pr_prace_all` group by user_id, data"
+				."SELECT user_id, data, sum(czas) as ile FROM `kart_pr_prace_all2` group by user_id, data"
 			.") p ON (p.user_id=di.id and p.data = di.day)"
 			."WHERE ile>540 OR ile<360 OR ile IS NULL"
 		.") di2, users u2 WHERE di2.id = u2.id ORDER BY nazwa ASC, day ASC"
 	.";";
 	
-//echo $query;
-	$result = $mysqli->query($query);
+// if ($user_id == 1) echo $query;
+// exit();
+	// $result = $mysqli->query($query);
 	$braki = array();
 	if ($result)
 	while($row = $result->fetch_assoc()) {

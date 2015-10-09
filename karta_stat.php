@@ -45,10 +45,12 @@
 	
 //	if ($perm == "3"){
 //	$query_1 = "SELECT dzial, if (k.nazwa = 'L4' or k.nazwa = 'Urlop',concat(d.id,'LU'),d.id) as dla_id, d.nazwa as dla, sum(czas) as ile FROM kart_pr_prace_all p, kart_pr_kat k, kart_pr_dzial d, users u where k.id_dzial = d.id and u.id = p.user_id and p.kat_id = k.id";
-	$query_1 = "SELECT dzial, IF( k.nazwa =  'L4', CONCAT( d.id,  'L' ), IF( k.nazwa =  'Urlop', CONCAT( d.id,  'U' ), IF( k.nazwa =  'IFS', CONCAT( d.id,  'IFS' ),d.id ))) AS dla_id, d.nazwa as dla, sum(czas) as ile FROM kart_pr_prace_all p, kart_pr_kat k, kart_pr_dzial d, users u where k.id_dzial = d.id and u.id = p.user_id and p.kat_id = k.id";
-	$query_1 = "SELECT dzial, IF( k.nazwa =  'L4', CONCAT( d.id,  'L' ), IF( k.nazwa =  'Urlop', CONCAT( d.id,  'U' ), IF( k.nazwa =  'IFS', CONCAT( d.id,  'IFS' ),d.id ))) AS dla_id, d.nazwa as dla, sum(czas) as ile FROM kart_pr_prace_all p, kart_pr_kat k, kart_pr_dzial d, users u where k.id_dzial = d.id and u.id = p.user_id and p.kat_id = k.id";
+	// $query_1 = "SELECT dzial, IF( k.nazwa =  'L4', CONCAT( d.id,  'L' ), IF( k.nazwa =  'Urlop', CONCAT( d.id,  'U' ), IF( k.nazwa =  'IFS', CONCAT( d.id,  'IFS' ),d.id ))) AS dla_id, d.nazwa as dla, sum(czas) as ile FROM kart_pr_prace_all p, kart_pr_kat k, kart_pr_dzial d, users u where k.id_dzial = d.id and u.id = p.user_id and p.kat_id = k.id";
+	// $query_1 = "SELECT dzial, IF( k.nazwa =  'L4', CONCAT( d.id,  'L' ), IF( k.nazwa =  'Urlop', CONCAT( d.id,  'U' ), IF( k.nazwa =  'IFS', CONCAT( d.id,  'IFS' ),IF( k.nazwa like 'Awaria%', CONCAT( d.id,  'A' ),d.id )))) AS dla_id, d.nazwa as dla, sum(czas) as ile FROM kart_pr_prace_all p, kart_pr_kat k, kart_pr_dzial d, users u where k.id_dzial = d.id and u.id = p.user_id and p.kat_id = k.id";
+	$query_1 = "SELECT dzial, IF( k.nazwa =  'L4', CONCAT( d.id,  'L' ), IF( k.nazwa =  'Urlop', CONCAT( d.id,  'U' ), IF( k.nazwa like 'Awaria%', CONCAT( d.id,  'A' ),d.id ))) AS dla_id, d.nazwa as dla, sum(czas) as ile FROM kart_pr_prace_all p, kart_pr_kat k, kart_pr_dzial d, users u where k.id_dzial = d.id and u.id = p.user_id and p.kat_id = k.id";
 	
-	$query_2 = "SELECT if(p.zlecenie='',if (z.nazwa is null,'',z.nazwa),p.zlecenie) as zlecenie, d.id as dla_id, d.nazwa as dla, sum(czas) as ile FROM kart_pr_prace_all p left join kart_pr_zadania z ON (p.zadanie = z.id), kart_pr_kat k, kart_pr_dzial d, users u where k.id_dzial = d.id and u.id = p.user_id and p.kat_id = k.id";
+//najnowsze	$query_2 = "SELECT if(p.zlecenie='',if (z.nazwa is null,'',z.nazwa),p.zlecenie) as zlecenie, d.id as dla_id, d.nazwa as dla, sum(czas) as ile FROM kart_pr_prace_all p left join kart_pr_zadania z ON (p.zadanie = z.id), kart_pr_kat k, kart_pr_dzial d, users u where k.id_dzial = d.id and u.id = p.user_id and p.kat_id = k.id";
+	$query_2 = "SELECT if(p.zlecenie='',if (z.nazwa is null,if (kat_id = 556,'Awaria sprzetu',if (kat_id = 547,'Zarzadzanie',if (kat_id = 557,'Delegacje',''))),z.nazwa),p.zlecenie) as zlecenie, d.id as dla_id, d.nazwa as dla, sum(czas) as ile FROM kart_pr_prace_all p left join kart_pr_zadania z ON (p.zadanie = z.id), kart_pr_kat k, kart_pr_dzial d, users u where k.id_dzial = d.id and u.id = p.user_id and p.kat_id = k.id";
 
 //	$query_2 = "SELECT if(p.zlecenie='',z.nazwa,p.zlecenie), d.id as dla_id, d.nazwa as dla, sum(czas) as ile FROM kart_pr_prace_all p left join kart_pr_zadania z ON (p.zadanie = z.id), kart_pr_kat k, kart_pr_dzial d, users u where k.id_dzial = d.id and u.id = p.user_id and p.kat_id = k.id";
 
@@ -69,6 +71,10 @@
 //	$query_2 .= $query." AND k.nazwa <> 'L4' AND k.nazwa <> 'Urlop' GROUP BY p.zlecenie, z.id, id_dzial ORDER BY `ile` DESC;";
 	$query_2 .= $query." AND k.nazwa <> 'L4' AND k.nazwa <> 'Urlop' GROUP BY zlecenie, id_dzial ORDER BY `ile` DESC;";
 
+if ($_SESSION["myusername"] == "913"){
+//echo $query_1;
+//	echo $query_2;
+}
 
 //exit($query_2);
 	
@@ -99,9 +105,14 @@
 	function s_fun($a,$b,$c){
 		global $swieta;
 //		$bb = $b/1000 - (Date("Z",$b/1000)/1 - 7200);
-		$bb = $b/1000 - (Date("Z",$b/1000)/1 - 3600);
-//		echo (($bb % (24*60*60))/60/60)."<>";
-		if ((($bb % (24*60*60))/60/60) == 21)
+		// $bb = $b/1000 - (Date("Z",$b/1000)/1 - 3600);
+		$bb = $b/1000;// - (Date("Z",$b/1000)/1 - 3600);
+//		echo (($bb % (24*60*60))/60/60)."<>\n";
+		// if ((($bb % (24*60*60))/60/60) == 21)
+			// $bb += 60*60;
+//		echo $bb."__\n";
+//		echo Date("Z",$bb)/1 ."**\n";
+		if (Date("Z",$bb)/1 == 3600)
 			$bb += 60*60;
 		if (isset( $swieta[Date("n",$bb)] ) && isset( $swieta[Date("n",$bb)][Date("j",$bb)]))
 			return "";
@@ -190,7 +201,9 @@ if ($_SESSION["myusername"] == "913"){
 		.") di2, users u2 WHERE di2.id = u2.id ORDER BY nazwa ASC, day ASC"
 	.";";
 	
-//echo $query;
+if ($_SESSION["myusername"] == "913"){
+	// echo $query;
+}
 	$result = $mysqli->query($query);
 	$braki = array();
 	if ($result)

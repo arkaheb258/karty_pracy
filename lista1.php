@@ -102,16 +102,16 @@ if ( !isset( $_SESSION["myusername"] ) ){
 <?php
 	if (isset($_REQUEST["user_id"]) && $_SESSION["myuser"]["kart_perm"] != "0")  {
 		if (isset($_REQUEST["year"]) && isset($_REQUEST["month"])) 
-			echo '<script type="text/javascript" src="baza_karta.php?user_id='.$_REQUEST["user_id"].'&month='.$_REQUEST["month"].'&year='.$_REQUEST["year"].'"></script>';
+			echo '<script type="text/javascript" src="baza_karta1.php?user_id='.$_REQUEST["user_id"].'&month='.$_REQUEST["month"].'&year='.$_REQUEST["year"].'"></script>';
 		else	
-			echo '<script type="text/javascript" src="baza_karta.php?user_id='.$_REQUEST["user_id"].'"></script>';
+			echo '<script type="text/javascript" src="baza_karta1.php?user_id='.$_REQUEST["user_id"].'"></script>';
 	} else {
 		if (isset($_REQUEST["month"])){
-			echo '<script type="text/javascript" src="baza_karta.php?month='.$_REQUEST["month"];
+			echo '<script type="text/javascript" src="baza_karta1.php?month='.$_REQUEST["month"];
 			if (isset($_REQUEST["year"])) echo '&year='.$_REQUEST["year"];
 			echo '"></script>';
 		} else	
-			echo '<script type="text/javascript" src="baza_karta.php"></script>';
+			echo '<script type="text/javascript" src="baza_karta1.php"></script>';
 	}
 ?>
 	<script type="text/javascript">
@@ -161,17 +161,17 @@ if ( !isset( $_SESSION["myusername"] ) ){
 		});
 		
 		$('#add').button().click(function(){
-			window.open("karta.php"+suser_link);
+			window.open("karta1.php"+suser_link);
 		});
 		$('#add_l4').button().click(function(){
 //			window.open("karta_l4.php");
-			window.open("karta.php?l4"+suser_link.replace("?","&"));
+			window.open("karta1.php?l4"+suser_link.replace("?","&"));
 		});
 		$('#s_user').button().click(function(){
-			window.open("sum.php");
+			window.open("sum1.php");
 		});
 		$('#s_stat').button().click(function(){
-			window.open('stat.php'+suser_link);
+			window.open('stat1.php'+suser_link);
 		});
 		$('#logout').button().click(function(){
 			window.open("logout.php?url=<?php echo $_SERVER["REQUEST_URI"]; ?>","_self");
@@ -198,7 +198,7 @@ if ( !isset( $_SESSION["myusername"] ) ){
 			console.log("wczorajsze id");
 			console.log(wczoraj);
 			for (var w in wczoraj) {
-				var link = "karta.php?copy_id="+wczoraj[w];
+				var link = "karta1.php?copy_id="+wczoraj[w];
 				<?php if (isset($_REQUEST["user_id"])) echo 'link += "&user_id="+'.$_REQUEST["user_id"].';'; ?>
 				link += "&add";
 				link += "&day="+powczoraj.getTime();
@@ -388,9 +388,9 @@ if ( !isset( $_SESSION["myusername"] ) ){
 //						var id = $('td:first',this).text();
 <?php
 	if (isset($_REQUEST["user_id"]) && $_SESSION["myuser"]["kart_perm"] != "0") 
-		echo "window.open('karta.php?user_id=".$_REQUEST["user_id"]."&id='+id);";
+		echo "window.open('karta1.php?user_id=".$_REQUEST["user_id"]."&id='+id);";
 	else
-		echo "window.open('karta.php?id='+id);";
+		echo "window.open('karta1.php?id='+id);";
 ?>
 		//				alert('dblclick id = '+id);
 					}).addClass('has_dblclick').css("cursor","pointer");
@@ -543,7 +543,7 @@ if (karta.zadanie){
 			}
 			// $('span',temp2).text((karta.timestamp_diff_h*60/24).toFixed(0));
 
-			$('.menu',temp2).append('<a href="karta.php?<?php if (isset($_REQUEST["user_id"]) && $_SESSION["myuser"]["kart_perm"] != "0") echo "user_id=".$_REQUEST["user_id"]."&"; ?>id='+karta.prac_id+'" target="_blank">'+karta.kat+" ("+karta.opis_p+')</a><br/>');
+			$('.menu',temp2).append('<a href="karta1.php?<?php if (isset($_REQUEST["user_id"]) && $_SESSION["myuser"]["kart_perm"] != "0") echo "user_id=".$_REQUEST["user_id"]."&"; ?>id='+karta.prac_id+'" target="_blank">'+karta.kat+" ("+karta.opis_p+')</a><br/>');
 			var list = new Array();
 			if(temp2.data('id'))
 				list = temp2.data('id');
@@ -595,7 +595,7 @@ if (karta.zadanie){
 //				$('.menu',this).show();
 //				window.open('karta.php?id='+id[0]);
 			} else
-				window.open('karta.php?id_k='+$(this).parent().data('id_k')+'&id_d='+$(this).parent().data('id_d'));
+				window.open('karta1.php?id_k='+$(this).parent().data('id_k')+'&id_d='+$(this).parent().data('id_d'));
 //console.log(id);
 //			alert($(this).data( "id" ));
 		});

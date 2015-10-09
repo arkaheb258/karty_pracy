@@ -63,6 +63,7 @@ if ( !isset( $_SESSION["myusername"] ) ){
 	<script>
 		_user_id = <?php echo $_SESSION["myuser"]["id"];?>;
 		_prac_id = <?php if (isset($_REQUEST["id"])) echo $_REQUEST["id"]; else echo 'null';?>;
+		_prac_nr = <?php if (isset($_REQUEST["nr"])) echo $_REQUEST["nr"]; else echo 'null';?>;
 		_kat_id = <?php if (isset($_REQUEST["id_k"])) echo $_REQUEST["id_k"]; else echo 'null';?>;
 		_dzia_id = <?php if (isset($_REQUEST["id_d"])) echo $_REQUEST["id_d"]; else echo 'null';?>;
 //		_filtr_dzial = "<?php if (isset($_REQUEST["dzial"])) echo $_REQUEST["dzial"]; else echo 'null';?>";
@@ -72,7 +73,7 @@ if ( !isset( $_SESSION["myusername"] ) ){
 		else if (typeof console.log === "undefined")
 			console.log = function(){};
 		
-		var dzialy = ['TR','RTR'];
+		var dzialy = [];
 		
 		$(function() {
 			function load_users(){
@@ -101,7 +102,7 @@ if ( !isset( $_SESSION["myusername"] ) ){
 			var miesiac = ["Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec","Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"];
 			for (var m in miesiac)
 				$('#month').append('<option value=\"'+(m/1+1)+'\">'+miesiac[m]+'</option>');
-			for (var y=2013;y<=now.getFullYear();y++)
+			for (var y=2013;y<=now.getFullYear()+1;y++)
 				$('#year').append('<option value=\"'+y+'\">'+y+'</option>');
 			$('#year').val(now.getFullYear());
 			var d = new Date();
@@ -116,6 +117,20 @@ if ( !isset( $_SESSION["myusername"] ) ){
 			$('#year').change(load_iframe);
 			
 			$('#dzial').change(load_users);
+
+			if (_prac_nr) {
+				for (var u in users) {
+					if (users[u].nr == _prac_nr){
+						_prac_id = users[u].id;
+						break;
+					}
+				}
+			}
+			if (_prac_id) 
+			{
+				$('#user').val(_prac_id);
+				load_iframe()
+			}
 		});
 	</script>
 </html>

@@ -2,7 +2,7 @@
 	session_start();
     ob_start();
 	$dzial = $_SESSION["myuser"]["dzial"];
-	$dzial = substr($dzial,0,2);
+	//$dzial = substr($dzial,0,2);
 	$nr = $_SESSION["myuser"]["nr"];
 	if ($nr == 913 || $nr == 914 )
 		$dzial = "TP";

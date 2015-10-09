@@ -1,4 +1,5 @@
 <?php
+	$times = array(microtime(true));
 	header('Content-type: application/json');
 	header('Cache-Control: no-cache, must-revalidate');
 	session_start();
@@ -8,6 +9,7 @@
 //	error_reporting(0);
 	$mysqli = new_polacz_z_baza();
 
+array_push($times,microtime(true));	
 /*	$query = "SELECT nazwa FROM users WHERE 1;";
 	$result = $mysqli->query($query);
 	$users = array();
@@ -19,7 +21,18 @@
 	echo 'var serv_epoch = '.$date->getTimestamp().';';
 
 	// $query = "SELECT *, data, p.czas as ile, p.zadanie as zad, d.nazwa as dzial, k.nazwa as kat, p.opis as opis_p, p.id as kart_id, u.nazwa as kart_user, p.id as prac_id, p.zlecenie as zlec FROM kart_pr_prace_all p , users u, kart_pr_kat k, kart_pr_dzial d WHERE k.id = p.kat_id AND k.id_dzial = d.id AND p.user_id = u.id AND p.user_id = ";
-	$query = "SELECT kat_id, id_dzial, id_kat, czas, zadanie, data, p.czas as ile, p.zadanie as zad, d.nazwa as dzial, k.nazwa as kat, p.opis as opis_p, p.id as kart_id, u.nazwa as kart_user, p.id as prac_id, p.zlecenie as zlec FROM kart_pr_prace_all p , users u, kart_pr_kat k, kart_pr_dzial d WHERE k.id = p.kat_id AND k.id_dzial = d.id AND p.user_id = u.id AND p.user_id = ";
+//(UNIX_TIMESTAMP(p.timestamp)*1000 - p.data)/(1000*60*60) as timestamp_diff_h
+	$query = "SELECT 
+kat_id, id_dzial, id_kat, czas, zadanie, data, p.timestamp,
+p.czas as ile, p.zadanie as zad, d.nazwa as dzial, k.nazwa as kat, p.opis as opis_p, p.id as kart_id, u.nazwa as kart_user, p.id as prac_id, coalesce(z.zlecenie, p.zlecenie) as zlec,
+(UNIX_TIMESTAMP(substring(p.timestamp,1,10))*1000 - p.data)/(1000*60*60) as timestamp_diff_h
+FROM kart_pr_prace_all p
+LEFT JOIN users u ON p.user_id = u.id
+LEFT JOIN kart_pr_kat k ON k.id = p.kat_id
+LEFT JOIN kart_pr_dzial d ON k.id_dzial = d.id
+LEFT JOIN kart_pr_zadania z ON p.zadanie = z.id
+WHERE p.user_id = ";
+//	FROM kart_pr_prace_all p , users u, kart_pr_kat k, kart_pr_dzial d WHERE k.id = p.kat_id AND k.id_dzial = d.id AND p.user_id = u.id AND p.user_id = ";
 	if (isset($_REQUEST["user_id"]) && $_SESSION["myuser"]["kart_perm"] != "0") 
 		$query .= $_REQUEST["user_id"];
 	else
@@ -47,7 +60,8 @@
 //	$query .= ' ORDER BY `id_dzial`,`kat_id`;';
 
 	$query .= ';';
-//	echo $query;
+	// echo $query;
+	// exit;
 	$result = $mysqli->query($query);
 	$karty = array();
 	 if ($result)
@@ -56,15 +70,18 @@
 			// $ids[] = $row["rap_id"];
 		}
 	echo 'var karty = '.json_encode($karty).';';
+array_push($times,microtime(true));
 
 //	$query = "SELECT z.id, z.user_id, z.nazwa, z.opis, z.aktywny, z.zlecenie, z.dzial_zlec, z.dzial_wyk, z.komentarz, z.timestamp FROM  kart_pr_zadania z, users u WHERE z.dzial_wyk like concat(\"%'\",u.dzial,\"'%\") AND u.id = ";
-	$query = "SELECT z.id, z.user_id, z.nazwa, z.opis, z.aktywny, z.zlecenie, z.dzial_zlec, z.dzial_wyk, z.komentarz, z.timestamp FROM  kart_pr_zadania z, users u WHERE z.prac_wykon like concat(\"%'\",u.id,\"'%\") AND u.id = ";
+	// $query = "SELECT z.id, z.user_id, z.nazwa, z.opis, z.aktywny, z.zlecenie, z.dzial_zlec, z.dzial_wyk, z.komentarz, z.timestamp FROM  kart_pr_zadania z, users u WHERE z.prac_wykon like concat(\"%'\",u.id,\"'%\") AND u.id = ";
+	$query = "SELECT z.* FROM  kart_pr_zadania z, users u WHERE z.prac_wykon like concat(\"%'\",u.id,\"'%\") AND u.id = ";
 	if (isset($_REQUEST["user_id"]) && $_SESSION["myuser"]["kart_perm"] != "0") 
 		$query .= $_REQUEST["user_id"];
 	else
 		$query .= $_SESSION["myuserid"];
-//	echo $query;
-//	$query = "SELECT * FROM  kart_pr_zadania WHERE 1;";
+// exit($query);
+	// echo $query;
+	//	$query = "SELECT * FROM  kart_pr_zadania WHERE 1;";
 //	$query .= ' ORDER BY `data`DESC;';
 //	$query .= ' ORDER BY `id_dzial`,`kat_id`;';
 //	echo $query;
@@ -75,6 +92,15 @@
 			 $zadania[$row["id"]] = $row;
 		}
 	echo 'var zadania = '.json_encode($zadania).';';
+
+	$query = "SELECT * FROM  kart_pr_projekty";
+	$result = $mysqli->query($query);
+	$foldery = array();
+	 if ($result)
+		while($row = $result->fetch_assoc()){
+			 $foldery[$row["id"]] = $row;
+		}
+	echo 'var foldery = '.json_encode($foldery).';';
 
 	$dzialy = array();
 	$kategorie = array();
@@ -118,7 +144,7 @@
 		$swieta[$row["miesiac"]][$row["dzien"]] = $row["opis"];
 	}
 	echo 'var swieta = '.json_encode($swieta).';';
-	
+/*	
 	$query = "SELECT * FROM `kart_pr_pnu`;";
 	$result = $mysqli->query($query);
 	$pnu = array();
@@ -126,7 +152,7 @@
 		$pnu[$row["nr"]] = $row;
 	}
 	echo 'var pnu = '.json_encode($pnu).';';
-
+*/
 	$query = "SELECT * FROM `users` WHERE id = ";
 	if (isset($_REQUEST["user_id"]) && $_SESSION["myuser"]["kart_perm"] != "0") 
 		$query .= $_REQUEST["user_id"];
@@ -138,7 +164,11 @@
 		$user_info = $row;
 	}
 	echo 'var user_info = '.json_encode($user_info).';';
+array_push($times,microtime(true));	
 
+	// echo '/*';
+	// var_dump($times);
+	// echo '*/';
 	
 	$mysqli->close();
 ?>
