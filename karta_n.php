@@ -10,7 +10,6 @@ if ( !isset( $_SESSION["myusername"] ) ){
 	}
 	else $_SESSION['timeout'] = time();
 }
-		$def_days_back = 30;
 		require_once ('conf.php');
 		if (isset($_REQUEST["kto"])){
 			header('Content-type: application/json');
@@ -68,26 +67,7 @@ if ( !isset( $_SESSION["myusername"] ) ){
 				
 				$t_diff = (new DateTime())->getTimestamp() - $kiedy/1000;
 
-//				session_start();
-				if ($_SESSION["myuser"]["id"] != 1 && $kto != "1" 
-				&& $kto != "33" //Piotr Janusz
-				&& $kto != "40" //Marek Miziak
-				// && $kto != "51" //Andrzej Skrzypiec
-				// && $kto != "11" //Bieniarz
-				// && $kto != "37" //Korczyński Maciej
-				// && $kto != "15" //Lukoszek
-				// && $kto != "28" //Drejka
-				// && $kto != "30" //Forajter
-				// && $kto != "60" //Krystian
-				// && $kto != "53" //Suiski
-				// && $kto != "52" //Skwarek
-				// && $kto != "54" //Szweda
-				// && $kto != "27" //Ćwiklicki Zbigniew
-				// && $kto != "25" //Ciesielski
-				// && $kto != "59" //Kostka
-				&& $t_diff > ($def_days_back+4)*24*60*60){
-					echo json_encode(array('OK',0,'DELETE','Proszę ustawić prawidłową datę',0));
-				} else {
+        {
 					$suma_czasu = 0;
 					//pobranie danych o sumie czasu pracy w danym dniu
 					$query = "SELECT SUM( czas ) as suma FROM  `$table` WHERE data = $kiedy AND user_id = $kto";
@@ -153,38 +133,6 @@ if ( !isset( $_SESSION["myusername"] ) ){
 				echo ')';
 			exit;
 		}
-		switch (getIP()){
-			case "192.168.34.220":	//Ja
-//				header('Location: http://portal.kopex.com.pl/Blokowanie/Blokowanie.html');
-//				exit;
-//				echo $date->getTimestamp();
-//				if ( $date->getTimestamp() >  1373629000 && $date->getTimestamp() <  1373629120){
-//					echo "Strona zablokowana przez Kopex S.A...</br>Pracownik o numerze stałym \"00913\" proszony jest o kontakt z działem IT.";
-//					exit;
-//				}
-			break;
-			case "192.168.34.237":	//Drejka
-//				header('Location: http://portal.kopex.com.pl/Blokowanie/Blokowanie.html');				
-//				exit;
-//				if ( $date->getTimestamp() >  1373629000 && $date->getTimestamp() < 1373629120){
-//					echo "Strona zablokowana przez Kopex S.A...</br>Pracownik o numerze stałym \"00597\" proszony jest o kontakt z działem IT.";
-//					exit;
-//				}
-			break;
-			case "192.168.34.59":	//Kamil				
-//				header('Location: http://portal.kopex.com.pl/Blokowanie/Blokowanie.html');				
-//				exit;
-			break;
-			case "192.168.34.131":	//Kusztal
-//				header('Location: http://portal.kopex.com.pl/Blokowanie/Blokowanie.html');				
-//				exit;
-			break;			
-			case "192.168.34.120":	//Pilch
-//				header('Location: http://portal.kopex.com.pl/Blokowanie/Blokowanie.html');				
-//				exit;
-			break;
-		}
-
 ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="pl" lang="pl">
@@ -225,13 +173,7 @@ if ( !isset( $_SESSION["myusername"] ) ){
 				</colgroup>
 				<tbody>
 					<tr><th>Nazwisko i Imię:</th><td><input id="kto_u" name="kto_u" /></td></tr>
-					<tr class="l4"><th>Od</th><td>
-						<input type="text" id="data_od" class="datetimepicker od " name="od" /><br/>
-					</td></tr>
-					<tr class="l4"><th>Do</th><td>
-						<input type="text" id="data_do" class="datetimepicker do " name="do" /><br/>
-					</td></tr>
-					<tr class="n_l4">
+					<tr>
 						<th>Dzień</th>
 						<td><input type="text" id="data" class="datetimepicker od " name="data" /><br/></td>
 					</tr>
@@ -244,23 +186,12 @@ if ( !isset( $_SESSION["myusername"] ) ){
 						<td><textarea type="text" id="zad_opis" name="zad_opis" rows="5" disabled style="width:100%;"></textarea></td>
 					</tr>
 					<tr>
-						<th>Wykonano pracę dla działu:</th>
-						<td><select id="dzial" name="dzial"><option value="null"></option></select></td>
-					</tr>
-					<tr class="n_l4">
 						<th><label for="czas">Czas pracy w godzinach:</label></th>
 						<td><input id="czas" name="czas" /></td>
 					</tr>
-					<tr class="n_l4">
-						<th><label for="zlec">Numer zlecenia / zamówienia:</label></th>
-						<td><input type="text" id="zlec" name="zlec" /></td>
-						<td>PNU Projekt nr <select id="pnu"><option value="null"></option></select>
-						<br/>Zadanie <input type="text" id="pnu_zad" name="pnu_zad" /></td>
-						<td>Ostatnio wpisywane:<select id="zlec_last"></select></td>
-					</tr>
 					<tr><th>Kategoria prac:</th><td id="kategorie"></td></tr>
 					<tr><td colspan="3">Opis:<br/><textarea id="opis" rows="6" name="opis" style="width:100%;"></textarea></td></tr>
-					<tr class="n_l4"><td>Ostatnio wpisywane:<select id="opis_last"><option value="null"></option></select><br/><div id="opis_sort">Sortuj alfabetycznie</div></td></tr>
+					<tr><td>Ostatnio wpisywane:<select id="opis_last"><option value="null"></option></select><br/><div id="opis_sort">Sortuj alfabetycznie</div></td></tr>
 					<tr><td colspan="3"></td></tr>
 					<tr>
 						<td colspan="1"></td>
@@ -273,28 +204,19 @@ if ( !isset( $_SESSION["myusername"] ) ){
 					</tr>
 				</tbody>
 			</table>
-<!--			<input type="submit" value="Gotowe" onsubmit="return validateForm()" method="post"> -->
 		</form>
 	</body>
-<?php
-	if (isset($_REQUEST["user_id"]) && $_SESSION["myuser"]["kart_perm"] != "0") 
-		echo '<script type="text/javascript" src="baza_karta.php?user_id='.$_REQUEST["user_id"].'"></script>';
-	else 
-		echo '<script type="text/javascript" src="baza_karta.php"></script>';
-?>
+<?php echo '<script type="text/javascript" src="baza_obj.php?user_id='.$_SESSION["myuser"]["id"].'"></script>'; ?>
 	<script type="text/javascript" src="jquery.min.js"></script>
 	<script type="text/javascript" src="jquery-ui.min.js"></script>
 	<script type="text/javascript" src="jquery.ui.datepicker-pl.js"></script>
 	<script type="text/javascript" src="jquery-ui-timepicker-addon.js"></script>
 	<script type="text/javascript" src="globalize.js"></script>
 	<script type="text/javascript" src="globalize.culture.de-DE.js"></script>
-	<script type="text/javascript" src="pnu.js"></script>
 
 	<script type="text/javascript" src="date.js"></script>
 	<script>
 	
-		var days_back = <?php echo $def_days_back;?>;
-			
 		_user_id = <?php echo $_SESSION["myuser"]["id"];?>;
 		_prac_id = '<?php if (isset($_REQUEST["id"])) echo $_REQUEST["id"]; else echo 'null';?>';
 		_kat_id = <?php if (isset($_REQUEST["id_k"])) echo $_REQUEST["id_k"]; else echo 'null';?>;
@@ -308,32 +230,11 @@ if ( !isset( $_SESSION["myusername"] ) ){
 		else if (typeof console.log === "undefined")
 			console.log = function(){};
 			
-		if (_user_id == 1){	days_back += 340; }
-//		if ("<?php echo $_SESSION["myuser"]["dzial"];?>" == "TR-1")
-//			$("#zad").parent().parent().show();
-			
-		var today = new Date();
-		
-		var prev = new Date();
-		for (var i=1; i<=days_back;i++){
-			prev.setDate(today.getDate() - i);
-			if (prev.getDay() == 0 || prev.getDay() == 6)
-				days_back++;
-			else if(swieta[prev.getMonth()+1] && swieta[prev.getMonth()+1][prev.getDate()])
-				days_back++;
-		}
-		
 		var zlec_last = [];
 		var opis_last = [];
 		var opis_last_arch = [];
 		
 		$(function() {
-			if (!_l4){
-				$(".l4").hide();
-			} else {
-				$(".n_l4").hide();
-				$("#copy").after('<div id="urlop" style="display:none;">Karta urlopowa</div>')
-			}
 		
 			Globalize.culture("de-DE");
 			$.widget( "ui.timespinner", $.ui.spinner, {
@@ -362,18 +263,7 @@ if ( !isset( $_SESSION["myusername"] ) ){
 				}
 			});
 			
-			if (Math.abs((new Date()).getTime()/1000 - serv_epoch) > 24*60*60)
-				alert("Proszę ustawić prawidłową datę.");
-
 			$("#czas").timespinner().timespinner( "value", "01:00" );
-//			$("#czas").parent().css("width","100%");
-//			$("#czas").spinner({
-//				min: 0.25,
-//				max: 12,
-//				step: 0.25,
-//				numberFormat: "n"
-// 		}).spinner( "value", 1 );
-
 			$('#gotowe').button().click(function(){send(false);});
 			$('#urlop').button().click(function(){send(false,true);});
 			$('#close').button().click(function(){window.close();});
@@ -382,81 +272,44 @@ if ( !isset( $_SESSION["myusername"] ) ){
 					send(true);
 				}
 			});
-
-//			$("#data").datepicker({ minDate: -1,maxDate: 0});
-//			$("#data").datepicker();
-			// _od.datetimepicker({
-				// timeText :  "Czas",
-				// hourText : "godz.",
-				// minuteText :  "min.",
-				// currentText :  "Teraz",
-				// closeText :  "Gotowe"
-			// });
-//			_od.datetimepicker('setDate', new Date());
-			zadania_sort = [];
-			for (var z in zadania){
-				zadania_sort.push(zadania[z]);
-			}
-			zadania_sort.sort(function(a,b) { if (a.nazwa > b.nazwa ) return 1; if (a.nazwa < b.nazwa ) return -1; return 0;} );
-			// for (var z in zadania){
-				// if (zadania[z].termin && (zadania[z].termin < ((new Date()).getTime() - 24*60*60*1000)))
-					// continue;
-				// if ((zadania[z].aktywny == "1") && (zadania[z].deleted == 0))
-					// $('#zad').append('<option value=\"'+zadania[z].id+'\" title="'+zadania[z].opis+'">'+zadania[z].nazwa+'</option>');
-			// }
-			for (var z in zadania_sort){
-				var sort_z = zadania_sort[z];
-				// console.log(sort_z);
-				// ukrycie zadań z przekroczonym terminem
-				// if (sort_z.termin && (sort_z.termin < ((new Date()).getTime() - 24*60*60*1000))){
-					// console.log(sort_z);
-					// continue;
-				// }
-				if ((sort_z.aktywny == "1") && (sort_z.deleted == 0)){
-					var t_title = sort_z.nazwa;
-					var t_par_id = sort_z.par_id;
-          var par_nazwa = '???';
-					if (!t_par_id) {
-						t_title = sort_z.typ + ' ' + sort_z.zlecenie + " -> " + t_title;
-					} else {
-            par_nazwa = foldery[t_par_id].nazwa;
-						do {
-							t_title = foldery[t_par_id].nazwa + " -> " + t_title;
-							t_par_id = foldery[t_par_id].par_id;
-						} while (t_par_id > 3);
-						// t_title = foldery[t_par_id].nazwa + " -> " + t_title;
-					}
-					// t_title = zadania[t_par_id].nazwa + " -> " + t_title;
-            // console.log(sort_z.nazwa, t_par_id, t_title);
-
-					// var opis = sort_z.nazwa+' ('+sort_z.typ+' '+sort_z.zlecenie+')';
-					var opis = t_title;
-					if (sort_z.rbh > 0)
-						opis += ' (limit = ' + sort_z.rbh +' rbh)';
-					// oznaczenie zadań z przekroczonym terminem
-
+      
+      function for_all_leafs(tree, path, callback) {
+        for (var c in tree.children){
+          for_all_leafs(tree.children[c], path.concat(c), callback);
+        }
+        for (var l in tree.leafs){
+          callback(tree.leafs[l], path.concat(l));
+        }
+      }
+      
+      // for_all_leafs(projekty_tree, [], function(ob, path){
+        // console.log(ob, path);
+      // });
+      // if (false)
+      for_all_leafs(projekty_tree, [], function(ob_nr, path){
+        var ob = zadania[ob_nr];
+        console.log(ob_nr, ob, path);
+        var t_title = ob.nazwa;
+        if (ob.par_id == 994) ;//prace inne
+        else if (ob.par_id == 989) ;//nieobecnosci
+        else {
+          // console.log(ob, path);
+					var opis = '';
+          for (var i in path) {
+            opis += path[i].nazwa + ' -> ';
+          }
+          opis += ob.nazwa;
 					var _style = '';
-					if (sort_z.termin && (sort_z.termin < ((new Date()).getTime() - 24*60*60*1000))){
+					if (ob.termin && (ob.termin < ((new Date()).getTime() - 24*60*60*1000))){
             _style = ' style="color:brown;"';
 					}
-					if (sort_z.par_id == 994) {
-            console.log(sort_z, opis, par_nazwa);
-            
-          }
-          
-          $('#zad').append('<option value=\"'+sort_z.id+'\" title="'+sort_z.opis+'"'+_style+'>'+opis+'</option>');
-				} else {
-					// console.log(sort_z);
-				}
-				// console.log(sort_z.termin);
-				// zadania[$('#zad').val()].rbh)
-			}
+					if (ob.rbh > 0)
+            opis += ' (limit = ' + ob.rbh +' rbh)';
+          $('#zad').append('<option value=\"'+ob.id+'\" title="'+ob.opis+'"'+_style+'>'+opis+'</option>');
+        }
+      })
 
-			// for (var z in zadania_sort){console.log(zadania_sort[z]);}
-			
 			function zad_change(){
-//				console.log($(this).val());
-//				console.log(zadania[$(this).val()]);
 				var temp_dz = $('#dzial').val();
 				if ($('#zad').val() != 'null'){
 					var _zad = zadania[$('#zad').val()];
@@ -467,11 +320,7 @@ if ( !isset( $_SESSION["myusername"] ) ){
 					$('#zlec_last').parent().hide();
 					// if ($('#zlec').val().indexOf("PNU Projekt nr ") == 0){
 					if (_zad.typ == "PNU"){
-//						console.log("test");
 						$('#kat_4_401').hide();
-//						$('#kat_4_inne > *').hide();
-//						$('#kat_4_451').show();
-//						$("label[for='kat_4_451']").show();
 
 						$('#kat_4_454').hide();
 						$("label[for='kat_4_454']").hide();
@@ -515,17 +364,10 @@ if ( !isset( $_SESSION["myusername"] ) ){
 					dzial_change();
 			};
 			$('#zad').change(zad_change);
-			for (var d in dzialy){
-				$('#dzial').append('<option value=\"'+d+'\" title="'+dzialy[d].opis+'">'+dzialy[d].nazwa+'</option>');
-				$('#kategorie').append('<div id="kat_'+d+'" class="kategorie"></div>');
-			}
-			$('.kategorie').hide();
 			function dzial_change(){
 				clear_err();
-				$('.kategorie').hide();
 				$('#kat_5').show();
 				$('#kat_'+$("#dzial option:selected").val()).show();
-				$("#kategorie input:checked").attr('checked',null);
 				if ($("#dzial option:selected").val() == 5) {
 					$('#urlop').show();
 					$('#kat_5_545').show();
@@ -556,60 +398,7 @@ if ( !isset( $_SESSION["myusername"] ) ){
 			}
 			$('#dzial').change(dzial_change);
 			
-			$("#pnu").parent().hide();
-			$("#pnu_zad").parent().hide();
-			for (var p in pnu){
-				$("#pnu").append('<option value=\"'+p+'\" title="'+pnu[p].opis+'">'+pnu[p].nr+'</option>');
-			}
-			
-			for (var k in kategorie){
-				var kat2 = [];
-				for (var k2 in kategorie[k])
-				//sortowanie po nazwach kategorii
-					kat2.push(kategorie[k][k2]);
-					kat2.sort(function(a,b) { 
-						if ((a.ma_podgr && b.ma_podgr) || (!a.ma_podgr && !b.ma_podgr))
-							return a.nazwa > b.nazwa;
-						else if (a.ma_podgr)
-							 return false;							
-					} );
-					
-//console.log(kat2);
-//console.log(k);
-//console.log(kategorie[k]);
-//console.log(kategorie[k]);
-//				for (var k2 in kategorie[k]){
-
-				for (var k3 in kat2){
-					var k2 = kat2[k3].id;
-					if (_l4 && !(kategorie[k][k2].long_time/1)) continue;
-					if (k2 == 450 && _user_id != 40 && _user_id != 33) continue;	//projekty tylko dla Marka i Janusza z TP
-					if (kategorie[k][k2].ma_podgr){
-						$('#kat_'+k).append('<div id="kat_'+k+'_'+kategorie[k][k2].id+'"><button>Rozwiń</button><span class="def" title="'+kategorie[k][k2].opis+'">'+kategorie[k][k2].nazwa+'</span><div class="sub" style="margin-left: 2em"></div></div>');
-						$('#kat_'+k+'_'+kategorie[k][k2].id+' > .sub').hide();
-						$('#kat_'+k+'_'+kategorie[k][k2].id+' > button').button({icons: {primary: "ui-icon-circle-plus"},text: false}).click(function(event){
-						var icons = $(this).button( "option", "icons" );
-						if (icons.primary == "ui-icon-circle-plus")
-							$(this).button( "option", "icons", { primary: "ui-icon-circle-minus"});
-						else
-							$(this).button( "option", "icons", { primary: "ui-icon-circle-plus"});
-							event.preventDefault();
-							$('.sub',$(this).parent()).toggle();
-						});
-						for (var k3 in kategorie[k][k2].ma_podgr){
-							$('#kat_'+k+'_'+kategorie[k][k2].id+' > .sub').append('<input type="radio" id="kat_'+k+'_'+k3+'" name="prace" value="'+k3+'" style="width:2em;" /><label for="kat_'+k+'_'+k3+'">'+kategorie[k][k2].ma_podgr[k3].nazwa+'<br/></label>');
-						}
-					}
-					else {
-						if (!$('#kat_'+k+'_inne').length)
-							$('#kat_'+k).append('<br/><div id="kat_'+k+'_inne"></div>');
-						$('#kat_'+k+'_inne').append('<input type="radio" id="kat_'+k+'_'+kategorie[k][k2].id+'" name="prace" value="'+kategorie[k][k2].id+'" style="width:2em;" /><label for="kat_'+k+'_'+kategorie[k][k2].id+'" title="'+kategorie[k][k2].opis+'">'+kategorie[k][k2].nazwa+'<br/></label>');
-					}
-				}
-				if (k==5 && <?php if ($_SESSION["myuser"]["id"] == 38) { echo 'true'; } else { echo 'false'; }?>) {
-					$('#kat_'+k+'_inne').append('<input type="radio" id="kat_'+k+'_600" name="prace" value="600" style="width:2em;" /><label for="kat_'+k+'_600" title="Czytanie Koranu">Czytanie Koranu</label><br/>');
-				}
-			}
+			var karty = [];
 			for (k in karty){
 				var opis = karty[k].opis_p;//karty[k].
 				if (opis != '' && $.inArray(opis, opis_last) == -1)
@@ -622,19 +411,6 @@ if ( !isset( $_SESSION["myusername"] ) ){
 				$('#zlec_last').append('<option>'+zlec_last[z]+'</option>');
 			
 			opis_last_arch = opis_last.slice(0);
-
-			// if ((user_info.dzial == "TR-1" && user_info.sekcja == "AU") 
-			if ((user_info.dzial == "TR-1") 
-			|| (user_info.dzial == "TR-2")
-			|| (user_info.dzial == "TR-3")
-			|| (user_info.dzial == "TP")
-			|| (true)
-			|| (user_info.id == 1)
-			){
-				if (!_l4)
-					$("#dzial").parent().parent().hide();
-				$("#zlec").parent().parent().hide();
-			}
 
 			
 			$('#opis_sort').button().click(function(){
@@ -691,8 +467,8 @@ if ( !isset( $_SESSION["myusername"] ) ){
 			$('#data').click(function() { clear_err(); });
 			$('textarea').keypress(function() { clear_err(); });
 			
-			$("#data_od").datepicker({minDate: -(days_back+30), maxDate: (days_back+30)}).datepicker('setDate', new Date()).click(function() { clear_err(); });
-			$("#data_do").datepicker({minDate: -(days_back+30), maxDate: (days_back+30)}).datepicker('setDate', new Date()).click(function() { clear_err(); });
+			$("#data_od").datepicker({minDate: -30, maxDate: 30}).datepicker('setDate', new Date()).click(function() { clear_err(); });
+			$("#data_do").datepicker({minDate: -30, maxDate: 30}).datepicker('setDate', new Date()).click(function() { clear_err(); });
 
 
 //			var temp_date = new Date();
@@ -702,7 +478,7 @@ if ( !isset( $_SESSION["myusername"] ) ){
 				if (obj){
 					$('#kto_u').val('<?php echo $_SESSION["myuser"]["nazwa"];?>').attr('disabled', 'disabled');
 					if (today.getDate() < 10) {
-						$("#data").datepicker({ minDate: -days_back,maxDate: 0}).datepicker('setDate', new Date());
+						$("#data").datepicker({ minDate: -30,maxDate: 0}).datepicker('setDate', new Date());
 					} else {
 						console.log('-1M');
 						$("#data").datepicker({ minDate: '-1M', maxDate: 0}).datepicker('setDate', new Date());
@@ -746,14 +522,14 @@ if ( !isset( $_SESSION["myusername"] ) ){
 				if (obj){
 					var temp_date = new Date();
 					temp_date.setTime(obj.data);
-					if (new Date() - temp_date > 86400000*(days_back+1)){
+					if (new Date() - temp_date > 86400000*(30+1)){
 						$('#gotowe').hide();
 						$('#del').hide();
 						$("#data").datepicker();
 						disable_all();
 						$('#czas').timespinner('option', "max", +Globalize.parseDate( "23:00"));
 					} else {
-						$("#data").datepicker({ minDate: -days_back, maxDate: 0});
+						$("#data").datepicker({ minDate: -30, maxDate: 0});
 					}
 					$('#kto_u').val(obj.kart_user).attr('disabled', 'disabled');
 					if (temp_date.getHours() == 23)
@@ -792,7 +568,7 @@ if ( !isset( $_SESSION["myusername"] ) ){
 				}
 			} else {
 				$('#copy').hide();
-				$("#data").datepicker({ minDate: -days_back,maxDate: 0});
+				$("#data").datepicker({ minDate: -30,maxDate: 0});
 				$('#kto_u').val('<?php echo $_SESSION["myuser"]["nazwa"];?>').attr('disabled', 'disabled');
 				if (_kat_id && _dzia_id){
 					$('#dzial').val(_dzia_id);
@@ -965,7 +741,7 @@ if ( !isset( $_SESSION["myusername"] ) ){
 							return;
 						}
 					}
-					if (obj.kiedy/1000 < now - (days_back+1)*86400 || obj.kiedy/1000 > now){
+					if (obj.kiedy/1000 < now - (30+1)*86400 || obj.kiedy/1000 > now){
 						$("#data").css("background-color",'red');
 						alert("Nieprawidłowa data.");
 						return;

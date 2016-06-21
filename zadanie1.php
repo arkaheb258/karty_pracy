@@ -6,7 +6,7 @@
 	}
 	
 	require_once ('conf.php');
-	$mysqli = new_polacz_z_baza();
+	$conn = polacz_sql();
 	if (isset($_REQUEST["usun"]) || isset($_REQUEST["dodaj"])){
 		if (isset($_REQUEST["callback"])){
 			$callback = trim($_REQUEST['callback']);
@@ -20,15 +20,16 @@
 	$query_log = '';
 	if (isset($_REQUEST["usun"])){
 		$id = $_REQUEST["usun"];
-		// $query = "DELETE FROM `kart_pr_zadania` WHERE `id`=$id;";
-		$query = "UPDATE `kart_pr_zadania` SET `deleted` = 1 WHERE `id`=$id;";
-		if ($mysqli->query($query))
+		// $query = "DELETE FROM kart_pr_zadania WHERE id=$id;";
+		$query = "UPDATE wwwkop.dbo.kart_pr_zadania SET deleted = 1 WHERE id=$id;";
+		$result = sqlsrv_query($conn, $query);
+		if ($result && sqlsrv_rows_affected($result) > 0) {
 			echo json_encode(array('OK',$id,'DELETE','Zadanie usunięte'));
-		else
+		} else
 			echo $query;
 		$query_log .= $query ."\n";
-		$query = "INSERT INTO `logi`(`kto`, `co`) VALUES (".$_SESSION["myuser"]["id"].", 'usuniecie (id=$id)')";
-		$mysqli->query($query);
+		// $query = "INSERT INTO logi(kto, co) VALUES (".$_SESSION["myuser"]["id"].", 'usuniecie (id=$id)')";
+		// $mysqli->query($query);
 	}
 	if (isset($_REQUEST["dodaj"])){
 		$kier_id = $_REQUEST["kier_id" ];
@@ -52,36 +53,39 @@
 		
 		$id = $_REQUEST["dodaj"];
 		if ($_REQUEST["dodaj"] == 0){
-			$query = "INSERT INTO `kart_pr_zadania`(`user_id`,`par_id`,`nazwa`, `forma`, `opis`, `aktywny`, `typ`, `dzial_wyk`, `dzial_zlec`, `prac_wykon`, `zlecenie`, `rbh`, `termin`, `komentarz`) "
+			$query = "INSERT INTO wwwkop.dbo.kart_pr_zadania(user_id,par_id,nazwa, forma, opis, aktywny, typ, dzial_wyk, dzial_zlec, prac_wykon, zlecenie, rbh, termin, komentarz) "
 			."VALUES (\"$kier_id\",$proj,\"$co\",\"$forma\",\"$opis\",\"$aktywny\",\"$typ\",\"$dzial_wyk\",$dzial_zlec,\"$prac_wykon\",\"$zlec\",$rbh,$termin,\"$koment\");";
-			if ($mysqli->query($query))
+			$result = sqlsrv_query($conn, $query);
+			if ($result && sqlsrv_rows_affected($result) > 0) {
 				echo json_encode(array('OK',$mysqli->insert_id,'INSERT','Zadanie dodane'));
-			else{
+			} else {
 				echo json_encode(array('OK',$mysqli->error,'INSERT',$mysqli->error));
 			}
 			$query_log .= $query ."\n";
 			// echo $query;
 		} else {
-			$query = "SELECT * FROM `kart_pr_zadania` WHERE `id`=$id;";
-			$result = $mysqli->query($query);
+			$query = "SELECT * FROM wwwkop.dbo.kart_pr_zadania WHERE id=$id;";
+			$result = sqlsrv_query($conn, $query);
+			// $result = $mysqli->query($query);
 			$row = null;
 			if ($result) {
-				$row = $result->fetch_assoc();
+				$row = get_row_sql($result);
 			}
 			
-			$query = "UPDATE `kart_pr_zadania` SET "
-			."`user_id`=\"$kier_id\",`par_id`=$proj,`nazwa`=\"$co\", `forma`=\"$forma\", `opis`=\"$opis\", `aktywny`=\"$aktywny\", "
-			."`typ`=\"$typ\", `dzial_wyk`=\"$dzial_wyk\", `prac_wykon`=\"$prac_wykon\", `rbh`=$rbh, `termin`=$termin, "
-			."`dzial_zlec`=$dzial_zlec, `zlecenie`=\"$zlec\", `komentarz`=\"$koment\" WHERE `id`=$id;";
-			if ($mysqli->query($query))
+			$query = "UPDATE wwwkop.dbo.kart_pr_zadania SET "
+			."user_id=\"$kier_id\",par_id=$proj,nazwa=\"$co\", forma=\"$forma\", opis=\"$opis\", aktywny=\"$aktywny\", "
+			."typ=\"$typ\", dzial_wyk=\"$dzial_wyk\", prac_wykon=\"$prac_wykon\", rbh=$rbh, termin=$termin, "
+			."dzial_zlec=$dzial_zlec, zlecenie=\"$zlec\", komentarz=\"$koment\" WHERE id=$id;";
+			$result = sqlsrv_query($conn, $query);
+			if ($result && sqlsrv_rows_affected($result) > 0) {
 				echo json_encode(array('OK',$id,'UPDATE','Zadanie poprawione'));
-			else
+			} else
 				echo $query;
 			$query_log .= $query ."\n";
-			if ($row && ($row["aktywny"] != $aktywny)) {
-				$query = "INSERT INTO `logi`(`kto`, `co`) VALUES (".$_SESSION["myuser"]["id"].", 'zmiana statusu czynności (id=$id) z ".$row["aktywny"]." na $aktywny')";
-				$mysqli->query($query);
-			}
+			// if ($row && ($row["aktywny"] != $aktywny)) {
+				// $query = "INSERT INTO logi(kto, co) VALUES (".$_SESSION["myuser"]["id"].", 'zmiana statusu czynności (id=$id) z ".$row["aktywny"]." na $aktywny')";
+				// $mysqli->query($query);
+			// }
 			// echo $query;
 		}
 //		echo $query;
@@ -104,30 +108,30 @@
 
 	$zadania = array();
 	if (isset($_REQUEST["id"])){
-		$query = "SELECT * FROM `kart_pr_zadania` WHERE id = ".$_REQUEST["id"].";";
+		$query = "SELECT * FROM wwwkop.dbo.kart_pr_zadania WHERE id = ".$_REQUEST["id"].";";
 			
-		$result = $mysqli->query($query);
+		$result = sqlsrv_query($conn, $query);
 		if ($result)
-			while($row = $result->fetch_assoc()){
+			while($row = get_row_sql($result)) {
 				$zadania[] = $row;
 			}
-		$query = "SELECT user_id, kat_id, SUM( czas ) /60 AS czas, nazwa FROM `kart_pr_prace` LEFT JOIN kart_pr_kat ON kart_pr_prace.kat_id=kart_pr_kat.id WHERE zadanie = ".$_REQUEST["id"]." GROUP BY user_id, kat_id;";
-		$result = $mysqli->query($query);
+		$query = "SELECT user_id, kat_id, SUM( czas ) /60 AS czas, nazwa FROM wwwkop.dbo.kart_pr_prace LEFT JOIN kart_pr_kat ON kart_pr_prace.kat_id=kart_pr_kat.id WHERE zadanie = ".$_REQUEST["id"]." GROUP BY user_id, kat_id;";
+		$result = sqlsrv_query($conn, $query);
 		if ($result) {
-			while($row = $result->fetch_assoc()){
+			while($row = get_row_sql($result)) {
 				$wykon[] = $row;
 			}
 		}
 	}
 	
 	$projekty = array();
-	// $query = "SELECT * FROM `kart_pr_projekty` WHERE id > 2;";
-	// $query = "SELECT * FROM `kart_pr_projekty` WHERE par_id is not null;";
-	$query = "SELECT * FROM `kart_pr_projekty`;";
+	// $query = "SELECT * FROM kart_pr_projekty WHERE id > 2;";
+	// $query = "SELECT * FROM kart_pr_projekty WHERE par_id is not null;";
+	$query = "SELECT * FROM wwwkop.dbo.kart_pr_projekty;";
 		
-	$result = $mysqli->query($query);
+	$result = sqlsrv_query($conn, $query);
 	if ($result) {
-		while($row = $result->fetch_assoc()){
+		while($row = get_row_sql($result)) {
 			$projekty[$row["id"]] = $row;
 		}
 	}
@@ -166,7 +170,7 @@
   </head>
 	<body>
 		<div style="float:right;font-size: 0.8em;margin-right: 1em;">Zalogowano jako: <?php echo $_SESSION["myuser"]["nazwa"]; ?></div><br/>
-		<form action="zadanie.php" style="background-image:url(images/logo_km100.png);background-repeat: no-repeat; ">
+		<form action="zadanie1.php" style="background-image:url(images/logo_km100.png);background-repeat: no-repeat; ">
 			<table style="margin:auto;">
 					<tr class="n_l4">
 						<th><label for="zad">Czynność:</label></th>
@@ -182,18 +186,11 @@
 						</td>
 					</tr>
 					<tr>
-						<th><label for="typ">Praca dla:</label></th>
+						<th><label for="typ">Typ:</label></th>
 						<td><select id="typ" name="typ">
 								<option value="PNU">PNU</option>
-								<option value="DRW">DRW</option>
-								<option value="Zlecenia">Zlecenia</option>
-								<option value="DPP">DPP</option>
-								<option value="DUG">DUG</option>
-								<option value="DMiS">DMiS</option>
-								<option value="DZZ DZR DZW">DZZ DZR DZW</option>
-								<option value="DA">DA</option>
-								<option value="DTM">DTM</option>
-								<option value="Kopex">Kopex</option>
+								<option value="DH">DH</option>
+								<option value="MPK">MPK</option>
 							</select><br/>
 						</td>
 					</tr>
@@ -238,6 +235,11 @@
 					</tr>
 					<tr>
 						<td id="dzial_wyk">
+							<label style="margin-left: 2em;" title="TP"><input type="checkbox" name="dzial_wyk" value="TP">TP</input></label>
+							<label style="margin-left: 2em;" title="TR-1"><input type="checkbox" name="dzial_wyk" value="TR-1">TR-1</input></label>
+							<label style="margin-left: 2em;" title="TR-2"><input type="checkbox" name="dzial_wyk" value="TR-2">TR-2</input></label>
+							<label style="margin-left: 2em;" title="TR-3"><input type="checkbox" name="dzial_wyk" value="TR-3">TR-3</input></label>
+							<label style="margin-left: 2em;" title="TR-R"><input type="checkbox" name="dzial_wyk" value="TR-R">TR-R</input></label>
 						</td>
 					</tr>
 					<tr>
@@ -274,7 +276,7 @@
 	<script type="text/javascript" src="jquery.ui.datepicker-pl.js"></script>
 	<script type="text/javascript" src="baza_karta.php"></script>
 	<script type="text/javascript" src="users_zad.php"></script>
-	<script type="text/javascript" src="http://192.168.30.12:88/pnu.js"></script>
+	<script type="text/javascript" src="http://192.168.30.12:8888/pnu.js"></script>
 	<script>
 		// _user_kart_perm = <?php echo $_SESSION["myuser"]["kart_perm"];?>;
 		_user_id = <?php echo $_SESSION["myuser"]["id"];?>;
@@ -314,15 +316,8 @@
 			$("#termin").datepicker();
 
 			//dodanie listy pracownikow i zablokowanie nie-podwladnych
-			// console.log(users);
-			var users_by_id = [];
-			var dzial_wyk_list = [];
 			for (var u in users){
 				var us = users[u];
-				users_by_id[us.id] = us;
-				// if (us.dzial != 'DRiW')
-				if (us.dzial != 'TT')
-					dzial_wyk_list[us.dzial] = true;
 				var czy_kier = "";
 				if (us.kart_perm > 0 && us.id != 1) 
 					czy_kier = " cl_kierownik";
@@ -333,32 +328,18 @@
 					// console.log("dbcl "+$(this).data('id'));
 					window.open('sum.php?id='+$(this).data('id'));
 				});
-				if ((us.kart_perm < _user_kart_perm) && _user_id != 1) {
-					if ((us.dzial.indexOf(_user_dzial) != 0) && (_user_dzial != 'DRiW')) {
+				if (us.kart_perm < _user_kart_perm || us.id == 1) {
+					if (us.dzial.indexOf(_user_dzial) != 0 && _user_dzial != 'DRiW')
 						$('#user_'+us.id+' input').attr('disabled', true);
-					} else if (_user_kart_perm == 1 && _user_sekcja && us.sekcja) {
-						if (us.sekcja != _user_sekcja) {
+					else if (_user_kart_perm == 1 && _user_sekcja && us.sekcja){
+						if (us.sekcja != _user_sekcja)
 							$('#user_'+us.id+' input').attr('disabled', true);
-						}
 					}
 				}
 			}
-			// console.log(users_by_id);
-			// console.log(dzial_wyk_list);
 			
 			$('.cl_kierownik').css("font-weight","Bold");
 
-			var dzial_wyk_list_temp = []
-			for (var i in dzial_wyk_list) {
-				dzial_wyk_list_temp.push(i);
-			}
-			dzial_wyk_list = dzial_wyk_list_temp.sort();
-			// console.log(dzial_wyk_list);
-
-			for (var i in dzial_wyk_list) {
-				$('#dzial_wyk').append('<label style="margin-left: 2em;" title="'+dzial_wyk_list[i]+'"><input type="checkbox" name="dzial_wyk" value="'+dzial_wyk_list[i]+'">'+dzial_wyk_list[i]+'</input></label>');
-			}
-			
 			$('#dzial_wyk >> input').change(function() {
 				// console.log($(this).val());
 				if ($(this).prop('checked'))
@@ -367,9 +348,10 @@
 				else
 					$('[class^="cl_d_'+$(this).val().replace("-","_")+'"]').hide();
 					// $('.cl_d_'+$(this).val().replace("-","_")).hide();
+
 			});
 			
-			$('.notify').hide();
+			// $('[class^="cl_d_"] .notify').remove();
 			// $('[class^="cl_d_"] > input:visible:enabled').before('<span class="notify">Powiadom</span>');
 			// $('[class^="cl_d_"] .notify').button();
 			$('.notify').button().click(function(){
@@ -380,11 +362,11 @@
 					// console.log();
 					adresaci.push($(this).parent().attr("title"));
 				});
-				var obj = {kto:adresaci, co: "Powiadomienie z czynności " + '<a href="http://192.168.30.12/karty_pracy/zadanie.php?id='+_zad_id+'">Link do czynności</a>' };
+				var obj = {kto:adresaci, co: "Powiadomienie z czynności " + '<a href="http://192.168.30.12/karty_pracy/zadanie1.php?id='+_zad_id+'">Link do czynności</a>' };
 				// console.log(obj);
 				// if (false)
 				$.ajax({
-					url: 'http://192.168.30.12:88/email?callback=?',
+					url: 'http://192.168.30.12:8888/email?callback=?',
 					dataType: 'json',
 					type: 'POST',
 					data: obj,
@@ -415,8 +397,6 @@
 			
 			//wypelnienie listy projektow i mpk 
 			for (var p in projekty){
-        if (!projekty[p].par_id) continue;
-        // console.log(projekty[p]);
 				if (p>=3 && (projekty[p].deleted == 0)) {
 					if (projekty[p].par_id == 1) {
 						$('#mpk').append('<option value=\"'+projekty[p].id+'\" title="'+projekty[p].opis+'">'+projekty[p].nazwa+'</option>');
@@ -437,8 +417,6 @@
 							t_title = projekty[t_par_id].nazwa + " -> " + t_title;
 							t_par_id = projekty[t_par_id].par_id;
 						} while (t_par_id > 3);
-            // console.log(t_par_id);
-            if (t_par_id)
 						t_title = projekty[t_par_id].nazwa + " -> " + t_title;
 						// console.log("g: "+group + " - " + par_id);
 						// console.log("g: "+t_par_id);
@@ -456,15 +434,6 @@
 			})
 			$("#proj").empty().append( proj_options );
 
-			//sortowanie komisji
-			var komis_options = $("#komisja option");
-			komis_options.sort(function(a,b) {
-				if (a.text > b.text) return 1;
-				else if (a.text < b.text) return -1;
-				else return 0
-			})
-			$("#komisja").empty().append( komis_options );
-			
 			pnu_change = function(){
 				// console.log("pnu_change");
 				$('#pnu_etap').empty();
@@ -495,15 +464,11 @@
 
 			//rekurencyjne szukanie typu zadania (mpk, pnu , dh)
 			function find_typ(par_id){
-        // console.log('par_id', par_id, projekty[par_id]);
-				// if (par_id < 3) {
-					// if (projekty[par_id].nazwa == "DRW")
-						// return "MPK";
-					// return projekty[par_id].nazwa;
-				// } else {
-          if (projekty[par_id].par_id === null) return projekty[par_id].nazwa;
+				if (par_id < 3) {
+					return projekty[par_id].nazwa;
+				} else {
 					return find_typ(projekty[par_id].par_id);
-				// }
+				}
 			}
 
 			function find_mpk(par_id){
@@ -525,25 +490,25 @@
 					var typ = find_typ(par_id2);
 					$('#typ').val(typ);
 					// .attr('disabled', true);
-					console.log('typ', typ);
+					console.log(typ);
 					switch (typ){
-						case "Zlecenia":
+						case "DH":
 							// $('#zlec').val('');
 							set_komisja(par_id2);
 						break;
 						case "PNU":
 							set_pnu(projekty[par_id2].zlec);
 						break;
-						default :
-						// break;
-						// case "MPK":
+						case "MPK":
 							// console.log(projekty[par_id2].id);
 							// console.log(projekty[par_id2].par_id);
 							// $('#mpk').val(projekty[par_id2].par_id);
 							$('#mpk').val(find_mpk(par_id2));
 							// $('#mpk').val(par_id2);
 							// .attr('disabled', true);
-						// break;
+						break;
+						default :
+						break;
 					}
 					clear_err();
 					return true;
@@ -631,7 +596,17 @@
 						$('.cl_mpk').hide();
 						$('#proj').parent().parent().hide();
 					break;					
-					case "Zlecenia":
+					case "MPK":
+						$('#lab_zlec').text("Konto MPK nr:");
+						// $('#zlec').hide();
+						$('#komisja').hide();
+						$('#mpk').show();
+						$('.cl_dh').hide();
+						$('.cl_mpk').show();
+						if ($('#proj option:selected').hasClass('cl_dh'))
+							$('#proj').val(null);
+					break;					
+					case "DH":
 						$('#lab_zlec').text("Komisja nr:");
 						// $('#zlec').show();
 						$('#mpk').hide();
@@ -642,14 +617,7 @@
 							$('#proj').val(null);
 					break;					
 					default:
-						$('#lab_zlec').text("Rodzaj prac:");
-						// $('#zlec').hide();
-						$('#komisja').hide();
-						$('#mpk').show();
-						$('.cl_dh').hide();
-						$('.cl_mpk').show();
-						if ($('#proj option:selected').hasClass('cl_dh'))
-							$('#proj').val(null);
+						$('#lab_zlec').text("Numer zlecenia / zamówienia:");
 					break;					
 				}
 			}
@@ -701,13 +669,13 @@
 			if (_zad_id){
 				var _zadanie = <?php if ($zadania) echo json_encode($zadania[0]); else echo 'null';?>;
 				console.log("_zadanie");
-				console.log(_zadanie);
-				// console.log(_zadanie.zlecenie);
+				// console.log(_zadanie);
+				console.log(_zadanie.zlecenie);
 				// console.log(_zadanie.par_id);
 				$('#zad').val(_zadanie.nazwa);
 				$('#akt').val(_zadanie.aktywny);
 				if (_zadanie.par_id) {
-					if (_zadanie.typ != "PNU" && _zadanie.typ != "Zlecenia"){
+					if (_zadanie.typ == "MPK"){
 						$('#mpk').val(_zadanie.par_id);
 					}
 					$('#proj').val(_zadanie.par_id);
@@ -731,7 +699,7 @@
 					temp_date.setTime(_zadanie.termin);
 					$('#termin').datepicker('setDate',temp_date);
 				}
-/*			
+			
 				$('#dzial_wyk >> input').each(function(){
 					if (_zadanie.dzial_wyk.indexOf("'"+$(this).val()+"'") != -1){
 						$(this).attr('checked',true);
@@ -739,20 +707,9 @@
 						// $('.cl_d_'+$(this).val().replace("-","_")).show();
 					}
 				});
-*/
 				var prac2 = _zadanie.prac_wykon.split("'").join('').split(',');
-				for (var p in prac2) {
-					if (prac2[p] == '') {continue;}
-					// console.log('prac2', p, 'id=', prac2[p]);
-//					console.log(prac2);
-					// console.log(users_by_id[prac2[p]]);
-					if (!users_by_id[prac2[p]]) {continue;}
-					var dzial = users_by_id[prac2[p]].dzial;
+				for (var p in prac2)
 					$('#user_'+prac2[p]+' > input').attr('checked',true);
-					$('#dzial_wyk [value='+dzial+']').attr('checked',true);
-					$('[class^="cl_d_'+dzial.replace("-","_")+'"]').show();
-					// console.log(prac2[p], users_by_id[prac2[p]].dzial);
-				}
 				$('#gotowe').text("Edytuj");
 				$('#del').button().click(function(){
 					if (confirm('Czy napewno chcesz skasować zadanie ?')){
@@ -797,7 +754,7 @@
 				act_users[wykon[w].user_id].sum += wykon[w].czas/1;
 				act_users[wykon[w].user_id].zad[wykon[w].nazwa] = wykon[w].czas/1;
 			}
-			// console.log(sum_wykon);
+			console.log(sum_wykon);
 			for (var a in act_users){
 				$("#user_"+a+" .wykon").text(": " + act_users[a].sum + "h")
 			}
@@ -815,7 +772,7 @@
 	// console.log(obj);
 		// return;
 					$.ajax({
-						url: 'zadanie.php?callback=?',
+						url: 'zadanie1.php?callback=?',
 						dataType: 'json',
 						type: 'POST',
 						data: obj,
@@ -852,7 +809,14 @@
 					// obj.zlec = $('#pnu').val();
 					if ($('#pnu_zad').val().trim() != "") obj.zlec += '/' + $('#pnu_etap').val().trim() + '/' + $('#pnu_zad').val().trim();
 				} else if (obj.typ == "MPK") {
-				} else if (obj.typ == "Zlecenia") {
+					if ($('#proj').val() != "null") {
+						obj.zlec = projekty[$('#mpk').val()].zlec;
+						// obj.zlec = projekty[$('#proj').val()].zlec;
+					} else {
+						obj.proj = $('#mpk').val();
+						obj.zlec = projekty[$('#mpk').val()].zlec;
+					}
+				} else {
 					if (!$('#komisja').val()) {
 						alert('Proszę wybrać nr komisji');
 						$('#komisja').css("background-color",'red');
@@ -863,14 +827,6 @@
 						obj.proj = $('#proj').val()
 					} else {
 						obj.proj = $('#komisja').val();
-					}
-				} else {
-					if ($('#proj').val() != "null") {
-						obj.zlec = projekty[$('#mpk').val()].zlec;
-						// obj.zlec = projekty[$('#proj').val()].zlec;
-					} else {
-						obj.proj = $('#mpk').val();
-						obj.zlec = projekty[$('#mpk').val()].zlec;
 					}
 				}
 				obj.dzial_wyk = '';
@@ -951,7 +907,7 @@
 // console.log(obj);
 // return;
 				$.ajax({
-					url: 'zadanie.php?callback=?',
+					url: 'zadanie1.php?callback=?',
 					dataType: 'json',
 					type: 'POST',
 					data: obj,

@@ -521,6 +521,8 @@ if (karta.zadanie){
 			kd.setTime(karta.data/1+ 3*60*60*1000);
 			// $('span',temp2).text(kd.getDay());
 			var max_h_delay = 48;
+			//if(swieta[kd.getMonth()+1] && swieta[kd.getMonth()+1][kd.getDate()]) max_h_delay += 24;
+			if (kd.getDay() == 4) max_h_delay += 72;
 			if (kd.getDay() == 5) max_h_delay += 48;
 			// if (kd.getDay() > 3) max_h_delay + 48;
 			if (karta.timestamp_diff_h > max_h_delay){

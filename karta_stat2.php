@@ -113,7 +113,7 @@ $query_3 .= $query . " ORDER by kiedy, zlecenie, kto";
 if ($_SESSION["myusername"] == "913"){
 // echo $query_1;
 // echo $query_2;
-// exit($query_3);
+// echo($query_3);
 // exit;
 }
 

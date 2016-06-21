@@ -168,7 +168,7 @@ if ( !isset( $_SESSION["myusername"] ) ){
 			window.open("karta1.php?l4"+suser_link.replace("?","&"));
 		});
 		$('#s_user').button().click(function(){
-			window.open("sum1.php");
+			window.open("sum.php");
 		});
 		$('#s_stat').button().click(function(){
 			window.open('stat1.php'+suser_link);

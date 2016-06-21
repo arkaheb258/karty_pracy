@@ -1,7 +1,11 @@
 ﻿<?php 
 ////http://luban.danse.us/jazzclub/javascripts/jquery/jsTree/reference/_examples/5_others.html
 	include 'header.php'; 
-	if ( $_SESSION["myuser"]["kart_perm"]  < 1) { exit("Brak uprawnień"); }
+
+	if ( $_SESSION["myuser"]["kart_perm"]  < 1) {
+		exit("Brak uprawnień");
+	}
+
 	require_once ('conf.php');
 	$mysqli = new_polacz_z_baza();
 
@@ -14,6 +18,7 @@
 			$callback = trim($_REQUEST['jsoncallback']);
 			echo $callback .'(';
 		}
+
 		if (isset($_REQUEST["dodaj"])){
 			$par_id = $_REQUEST["par_id" ];
 			$lvl = $_REQUEST["lvl" ];
@@ -28,12 +33,17 @@
 			else
 				echo $query;
 		}
+		
 		if (isset($_REQUEST["usun"])){
 			$id = $_REQUEST["usun"];
+			// $query = "DELETE FROM `kart_pr_projekty` WHERE `id`=$id;";
 			$query = "UPDATE `kart_pr_projekty` SET `deleted` = 1 WHERE `id`=$id;";
-			if ($mysqli->query($query)) echo json_encode(array('OK',$id,'DELETE','Zadanie usunięte'));
-			else echo $query;
+			if ($mysqli->query($query))
+				echo json_encode(array('OK',$id,'DELETE','Zadanie usunięte'));
+			else
+				echo $query;
 		}
+
 		if (isset($_REQUEST["rename"])){
 			$id = $_REQUEST["rename"];
 			$nazwa = $_REQUEST["nazwa"];
@@ -42,19 +52,42 @@
 				$query = "UPDATE `kart_pr_projekty` SET `nazwa` = '$nazwa', `zlec` = '$nazwa' WHERE `id`=$id;";
 			else
 				$query = "UPDATE `kart_pr_projekty` SET `nazwa` = '$nazwa' WHERE `id`=$id;";
-			if ($mysqli->query($query)) echo json_encode(array('OK',$id,'RENAME','Nazwa zmieniona'));
-			else echo $query;
+			if ($mysqli->query($query))
+				echo json_encode(array('OK',$id,'RENAME','Nazwa zmieniona'));
+			else
+				echo $query;
 		}
+
 		if (isset($_REQUEST["label"])){
 			$id = $_REQUEST["label"];
 			$nazwa = $_REQUEST["nazwa"];
 			$query = "UPDATE `kart_pr_projekty` SET `opis` = '$nazwa' WHERE `id`=$id;";
-			if ($mysqli->query($query)) echo json_encode(array('OK',$id,'LABEL','Opis zmieniony'));
-			else echo $query;
+			if ($mysqli->query($query))
+				echo json_encode(array('OK',$id,'LABEL','Opis zmieniony'));
+			else
+				echo $query;
 		}
+		
 		if (isset($_REQUEST["active"])){
 			$id = $_REQUEST["active"];
-      $aktywny = $_REQUEST["new_state"];
+			// 1>>0>>3>>1
+			$aktywny = 1;
+      if (isset($_REQUEST["new_state"])) {
+          $aktywny = $_REQUEST["new_state"];
+      } else {
+        $query_3 = "SELECT aktywny FROM `kart_pr_projekty` WHERE id =$id;";
+        $result = $mysqli->query($query_3);
+        if ($result) {
+          $row = $result->fetch_assoc();
+          if ($row["aktywny"] == 0)
+            $aktywny = 3;
+          else if ($row["aktywny"] == 1)
+            $aktywny = 0;
+          else 
+            $aktywny = 1;
+        }
+      }
+			//echo $aktywny;
 			$query = "UPDATE `kart_pr_projekty` SET `aktywny` = ".$aktywny." WHERE `id`=$id;";
 			$query2 = "UPDATE `kart_pr_projekty` SET `aktywny` = ( SELECT aktywny FROM `kart_pr_projekty` WHERE id =$id ) WHERE `par_id`=$id;";
 			if ($mysqli->query($query)) {
@@ -65,6 +98,7 @@
 			$query = "INSERT INTO `logi`(`kto`, `co`) VALUES (".$_SESSION["myuser"]["id"].", 'zmiana statusu folderu (id=$id)')";
 			$mysqli->query($query);
 		}
+
 		if (isset($_REQUEST["template"])){
 			$id = $_REQUEST["template"];
 			$komisja = $_REQUEST["nazwa"];
@@ -75,18 +109,26 @@
 				$komisja = $_REQUEST["komisja"];
 				$nazwa = $_REQUEST["nazwa"];
 			}
+			
 			if ($id == 411 || $template_typ == 'grot') //GROT
 				$query = "CALL add_template_grot(".$_SESSION["myuser"]["id"].",'$komisja','$nazwa', $id)";
 			else if ($id == 412 || $template_typ == 'rybnik') //RYBNIK
 				$query = "CALL add_template_rybnik(".$_SESSION["myuser"]["id"].",'$komisja','$nazwa', $id)";
 			else
 				$query = "CALL add_template(".$_SESSION["myuser"]["id"].",'$komisja', $id)";
-			if ($mysqli->query($query)) echo json_encode(array('OK',$id,'TEMPLATE','Dodano szablon'));
-			else echo $query;
+			if ($mysqli->query($query))
+				echo json_encode(array('OK',$id,'TEMPLATE','Dodano szablon'));
+			else
+				echo $query;
 		}
-		if (isset($_REQUEST["callback"]) || isset($_REQUEST["jsoncallback"])) echo ')';
+	
+		if (isset($_REQUEST["callback"]) || isset($_REQUEST["jsoncallback"]))
+			echo ')';
 		exit;
 	}
+
+	// $query = "SELECT * FROM `kart_pr_zadania` WHERE deleted = 0;";
+	
 	$query = "SELECT z . * , w.wykon
 		FROM  `kart_pr_zadania` z
 		LEFT JOIN (
@@ -97,32 +139,47 @@
 		)w ON z.id = w.zad_id
 		WHERE z.deleted = 0
 		order by z.timestamp;";
+//	echo $query;
 		
 	$zadania = array();
 	$result = $mysqli->query($query);
-	if ($result) while($row = $result->fetch_assoc()){ $zadania[] = $row; }
+	if ($result)
+		while($row = $result->fetch_assoc()){
+			$zadania[] = $row;
+		}
 
 	$query = "SELECT * FROM `kart_pr_projekty` WHERE deleted = 0 ORDER BY lvl, nazwa;";
+/*
+	"SELECT * 
+FROM  `kart_pr_projekty` pr left join 
+(SELECT z.id, z.rbh, SUM( p.czas ) /60 AS wypracowane
+	FROM (
+		SELECT * 
+		FROM  `kart_pr_zadania`
+		WHERE rbh >0
+	)z
+JOIN  `kart_pr_prace` p ON p.zadanie = z.id
+GROUP BY z.id) x on pr.par_id = x.id"
+*/
 	$projekty_lvl = array();
 	$projekty = array();
 	$result = $mysqli->query($query);
-	if ($result) while($row = $result->fetch_assoc()){
-    $projekty[$row["id"]] = $row;
-    $projekty_lvl[] = $row;
-  }
-
+	if ($result)
+		while($row = $result->fetch_assoc()){
+			$projekty[$row["id"]] = $row;
+			$projekty_lvl[] = $row;
+		}
+	if (isset($_REQUEST["test"])) {
+		// var_dump($projekty);
+		// exit;
+	}
   if (isset($_REQUEST["dane"])) {
-		echo '_user_id = '.$_SESSION["myuser"]["id"].';';
-		echo '_prac_id = '; if (isset($_REQUEST["id"])) echo $_REQUEST["id"]; else echo 'null'; echo ';';
-		echo '_kat_id = ';  if (isset($_REQUEST["id_k"])) echo $_REQUEST["id_k"]; else echo 'null'; echo ';';
-		echo '_dzia_id = '; if (isset($_REQUEST["id_d"])) echo $_REQUEST["id_d"]; else echo 'null'; echo ';';
-		echo '_copy_id = '; if (isset($_REQUEST["copy_id"])) echo $_REQUEST["copy_id"]; else echo 'null'; echo ';';
-		echo 'var sum_user_id = '; if (isset($_REQUEST["user_id"])) echo $_REQUEST["user_id"]; else echo 'null'; echo ';';
 		echo '_zadania = '.json_encode($zadania).';';
 		echo '_projekty = '.json_encode($projekty_lvl).';';
 		echo '_projekty2 = '.json_encode($projekty).';';
     exit;
   }
+  
 	head('Zadania');
 ?>
 	<head>
@@ -143,6 +200,8 @@
 		</style>
 	</head>
 	<body style="background-image:url(images/logo_km100.png);background-repeat: no-repeat; ">
+<?php logged_as();?>
+	
 			<table style="margin:auto; width: 50%;">
 					<tr>
 						<td>Filtr: <select id="akt" name="akt" style="width: 10em;">
@@ -165,6 +224,7 @@
 								<option value="">Wszystkie</option>
 								<option value="TR-1">TR-1</option>
 								<option value="TR-2">TR-2</option>
+								<option value="TR-3">TR-3</option>
 								<option value="TP">TP</option>
 								<option value="RTR">RTR</option>
 							</select><br/>
@@ -187,6 +247,13 @@
 	<script type="text/javascript" src="?dane"></script>
 	<script src="./jstree/jstree.js"></script>
 	<script>
+		_user_id = <?php echo $_SESSION["myuser"]["id"];?>;
+		_prac_id = '<?php if (isset($_REQUEST["id"])) echo $_REQUEST["id"]; else echo 'null';?>';
+		_kat_id = <?php if (isset($_REQUEST["id_k"])) echo $_REQUEST["id_k"]; else echo 'null';?>;
+		_dzia_id = <?php if (isset($_REQUEST["id_d"])) echo $_REQUEST["id_d"]; else echo 'null';?>;
+		_copy_id = '<?php if (isset($_REQUEST["copy_id"])) echo $_REQUEST["copy_id"]; else echo 'null';?>';
+		var sum_user_id = <?php if (isset($_REQUEST["user_id"])) echo $_REQUEST["user_id"]; else echo 'null';?>;
+
 		if (typeof console === "undefined")
 			console = {log:function(){}};
 		else if (typeof console.log === "undefined")
@@ -278,8 +345,13 @@
 			// console.log(zlec);
 			// console.log(zlec_t);
 			if(!zlec_t) return null;
-			for (var pi in data){
-				var p = data[pi];
+			var nr_sekcji = 0;
+//			if (zlec_t[2] == "W") nr_sekcji = 2;
+//			else if (zlec_t[2] == "RY") nr_sekcji = 1;
+//			else if (zlec_t[2] == "DHTP") nr_sekcji = 3;
+			// console.log(zlec_t);
+			for (var pi in data[nr_sekcji].children){
+				var p = data[nr_sekcji].children[pi];
 				if (p.text == "Projekt nr "+zlec_t[1]+zlec_t[2]) {
 					if (zlec_t[4]) {
 						for (var z2i in p.children){
@@ -291,8 +363,8 @@
 					} else {
 						return p.children;
 					}
-					for (var ei in p.children){
-						var e = p.children[ei];
+					for (var ei in data[nr_sekcji].children[pi].children){
+						var e = data[nr_sekcji].children[pi].children[ei];
 						if (e.text == "Wariant "+zlec_t[3] 
 						|| e.text == "Etap "+zlec_t[3]) {
 							if (zlec_t[4]) {
@@ -367,15 +439,27 @@
 				if (p.status == 3)
 					temp_icon = ikona_fok;
 				// if (!w24ry || p.nr != "4RY") {
-					pnu_t.push({text:"Projekt nr "+p.nr, children: etap, a_attr: {title: p.opis}, icon : temp_icon, id:"pnu" + si + "_" + pi });
-					// sekcja.push({text:"Projekt nr "+p.nr, children: etap, a_attr: {title: p.opis}, icon : temp_icon, id:"pnu" + si + "_" + pi });
+					sekcja.push({text:"Projekt nr "+p.nr, children: etap, a_attr: {title: p.opis}, icon : temp_icon, id:"pnu" + si + "_" + pi });
 				// } 
 				// if (p.nr == "4RY") {
 					// w24ry = etap;
 				// }
 			}
 		}
-		// pnu_t.push({text: "KM S.A.", children: sekcja });
+		pnu_t.push({text: "KM S.A.", children: sekcja });
+    
+		var data = [
+			{ text: "PNU", id: "p0", children: pnu_t }, 
+			{ text: "DRW", id: "p1", children: [] }//, 
+			// { text: "DH", id: "p2", children: [] }
+		];
+    for (var pri in _projekty) {
+			var pr = _projekty[pri];
+      if (pr.id < 2) continue;
+      if (pr.lvl > 0) break;
+      // console.log(pr);
+      data.push({ text: pr.nazwa, id: "p"+pr.id, children: [] });
+    }
 
 		//zsumowanie godzin z czynnosci na foldery
 		for (var pri in _projekty2) {
@@ -405,12 +489,6 @@
 			// console.log(count);
 		}
 
-		var data = [];
-    for (var pri in _projekty2) {
-			var pr = _projekty2[pri];
-      if (pr.lvl == 0) { data.push({ text: pr.nazwa, id: "p"+pr.id, children: [] }); }
-    }
-    data[0].children = pnu_t;
 		//dopisanie projektow do drzewka
 		for (var pri in _projekty) {
 			var ikona_fnakt = "jstree-folderx";
@@ -487,6 +565,9 @@
 			} else 
 				new_node.text += ")";
 			if (z.typ == "PNU"){
+				// if (z.zlecenie[0] == "4" && z.zlecenie[1] == "R") {
+					// console.log(z.zlecenie);
+				// }
 				var p = search_par_pnu(data[0].children, z.zlecenie);
 				if (p) {
 					var p2 = search_par(p, z);
@@ -495,13 +576,40 @@
 					p.push(new_node);
 					dodany = true;
 				}
-			} else {
+			} else if (z.typ == "MPK"){
 				if (z.par_id) {
-          var p = search_par(data, z);
-          if (p) {
-            p.push(new_node);
-            dodany = true;
+					var p = search_par(data[1].children, z);
+					if (p) {
+						p.push(new_node);
+						dodany = true;
+					}
+          if (!dodany) {
+            var p = search_par(data, z);
+            if (p) {
+              p.push(new_node);
+              dodany = true;
+            }
           }
+				}
+			} else {
+//TODO: docelowo ujednolicic z MPK
+        // console.log(z.id);
+        // console.log(data);
+/*
++limit godzin na osobę
+*/        
+        
+        var temp_id = 9;
+        // break;
+				if (z.par_id) {
+					var p = search_par(data[temp_id].children, z);
+					if (p) {
+						p.push(new_node);
+						dodany = true;
+					}
+				} else {
+					data[temp_id].children.push(new_node);
+					dodany = true;
 				}
 			}
 			if (!dodany) {
@@ -515,9 +623,24 @@
 		
 		$('#lista_pnu').jstree({
 			'core' : { 'data' : data, "check_callback" : true}, 
-			"plugins" : plugs, 
-      "contextmenu" : { "items": customMenu}
+			"plugins" : plugs, //[ "search", "contextmenu", "state" ],
+/*				"rules" : {
+				// clickable : [ "root2", "folder" ],
+				// deletable : [ "root2", "folder" ],
+				renameable : "all",
+				// creatable : [ "folder" ],
+				// draggable : [ "folder" ],
+				// dragrules : [ "folder * folder", "folder inside root", "tree-drop * folder" ],
+				// drag_button : "left",
+				droppable : [ "tree-drop" ]
+			},
+*/				"contextmenu" : { "items": customMenu}
 		}).bind("select_node.jstree", function (e, data) {
+			// var href = data.node.a_attr.href;
+			// if (href != "#")
+				// window.open(href);
+			// console.log(href);
+			
 		}).bind('open_node.jstree', function(e, data) {
 			// invoked after jstree has loaded
 			load_zad();
@@ -532,6 +655,7 @@
 				$('#lista_pnu').jstree(true).select_node(_prac_id, true);
 			}
 		});;
+		
 		
 		var to = false;
 		$('#lista_pnu_q').keyup(function () {
@@ -801,21 +925,22 @@
         delete items.deleteItem;
         delete items.activate;
         delete items.end;
+        if (items.activate) {
+          if ($node.icon != "jstree-folderx" && $node.icon != "jstree-folderok") {
+            items.activate.label = "Dezaktywuj";
+          } else {
+            delete items.end;
+          }
+        }
         return items;
       }
       delete items.open;
       delete items.create.submenu.create_mpk;
-
-      if (items.activate) {
-        if ($node.icon != "jstree-folderx" && $node.icon != "jstree-folderok") {
-          items.activate.label = "Dezaktywuj";
-        } else {
-          delete items.end;
-        }
-      }
+    
       //Szczególna obsługa PNU
       if ($node.id == "p0" 
-      || $node.parents[0] == "p0") {
+      || $node.parents[0] == "p0"
+      || $node.parents[1] == "p0") {
         delete items.create;
         delete items.deleteItem;
         delete items.renameItem;
@@ -824,8 +949,8 @@
         delete items.end;
         return items;
       }
-      if ($node.parents[1] == "p0" 
-      || $node.parents[2] == "p0") {
+      if ($node.parents[2] == "p0" 
+      || $node.parents[3] == "p0") {
         if ($node.text.search("Etap ") == 0) {
           delete items.create;
           delete items.deleteItem;
