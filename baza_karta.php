@@ -74,12 +74,24 @@ array_push($times,microtime(true));
 
 //	$query = "SELECT z.id, z.user_id, z.nazwa, z.opis, z.aktywny, z.zlecenie, z.dzial_zlec, z.dzial_wyk, z.komentarz, z.timestamp FROM  kart_pr_zadania z, users u WHERE z.dzial_wyk like concat(\"%'\",u.dzial,\"'%\") AND u.id = ";
 	// $query = "SELECT z.id, z.user_id, z.nazwa, z.opis, z.aktywny, z.zlecenie, z.dzial_zlec, z.dzial_wyk, z.komentarz, z.timestamp FROM  kart_pr_zadania z, users u WHERE z.prac_wykon like concat(\"%'\",u.id,\"'%\") AND u.id = ";
-	$query = "SELECT z.* FROM  kart_pr_zadania z, users u WHERE z.prac_wykon like concat(\"%'\",u.id,\"'%\") AND u.id = ";
-	if (isset($_REQUEST["user_id"]) && $_SESSION["myuser"]["kart_perm"] != "0") 
+	// $query = "SELECT z.* FROM  kart_pr_zadania z, users u WHERE z.prac_wykon like concat(\"%'\",u.id,\"'%\") AND u.id = ";
+	$query = "SELECT z.* FROM  kart_pr_zadania z, users u, kart_pr_prace p WHERE (z.prac_wykon like concat(\"%'\",u.id,\"'%\") or p.zadanie = z.id) and p.user_id = u.id AND u.id = ";
+  
+  $q_u_id = $_SESSION["myuserid"];
+  
+	if (isset($_REQUEST["user_id"]) && $_SESSION["myuser"]["kart_perm"] != "0") {
 		$query .= $_REQUEST["user_id"];
-	else
+    $q_u_id = $_REQUEST["user_id"];
+	} else {
 		$query .= $_SESSION["myuserid"];
-// exit($query);
+  }
+  $query .= " GROUP BY id;";
+
+	$new_query = "( SELECT z.* FROM  kart_pr_zadania z WHERE z.prac_wykon like concat(\"%'\",".$q_u_id.",\"'%\") )";
+	$new_query .= "UNION ( SELECT z.* FROM  kart_pr_zadania z, kart_pr_prace p WHERE p.zadanie = z.id and p.user_id = ".$q_u_id." );";
+  $query = $new_query;
+  
+  // exit($query);
 	// echo $query;
 	//	$query = "SELECT * FROM  kart_pr_zadania WHERE 1;";
 //	$query .= ' ORDER BY `data`DESC;';
@@ -92,6 +104,7 @@ array_push($times,microtime(true));
 			 $zadania[$row["id"]] = $row;
 		}
 	echo 'var zadania = '.json_encode($zadania).';';
+array_push($times,microtime(true));
 
 	$query = "SELECT * FROM  kart_pr_projekty";
 	$result = $mysqli->query($query);
@@ -166,9 +179,10 @@ array_push($times,microtime(true));
 	echo 'var user_info = '.json_encode($user_info).';';
 array_push($times,microtime(true));	
 
-	// echo '/*';
-	// var_dump($times);
-	// echo '*/';
+	echo '/*';
+	var_dump($times);
+	// var_dump($new_query);
+	echo '*/';
 	
 	$mysqli->close();
 ?>

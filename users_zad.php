@@ -29,8 +29,10 @@
 		// $query = "SELECT id,nazwa,dzial,kart_perm FROM users WHERE kart_perm <= ".$perm." OR id=1 OR id=40 OR id = ".$_SESSION["myuser"]["id"]."";
 	// else if ($perm == "3")
 	$query = "SELECT id,nr,nazwa,dzial,sekcja,kart_perm FROM users WHERE 1";
+	// $query = "SELECT id,nr,nazwa,dzial,sekcja,kart_perm FROM users WHERE dzial NOT LIKE '?%' AND dzial NOT LIKE 'TT%'";
 	// else
 		// $query = "SELECT id,nazwa,dzial FROM users WHERE id=".$_SESSION["myuser"]["id"];
+	$query .= " AND dzial not like 'TT%' ";
 	$query .= " AND dzial not like '?%' ORDER BY nazwa;";
 	$result = $mysqli->query($query);
 	$users = array();

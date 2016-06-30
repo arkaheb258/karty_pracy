@@ -6,6 +6,7 @@ RewriteEngine On
 	RewriteRule ^scripts/(.+)$ 		/scripts/$1
 	RewriteRule 	^jquery.min.js$ 				/lib/jquery-1.9.1.min.js
 	RewriteRule 	^jquery-ui.min.js$ 			/lib/jquery-ui-1.10.2.min.js
+	RewriteRule 	^jquery-ui-new.min.js$ 			/lib/jquery-ui-new.min.js
 
 	RewriteRule 	^jquery-ui.css$							/lib/css/jquery-ui.css
 	RewriteRule 	^kopex.css$								/lib/css/kopex.css

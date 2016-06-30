@@ -10,180 +10,15 @@ if ( !isset( $_SESSION["myusername"] ) ){
 	}
 	else $_SESSION['timeout'] = time();
 }
-		$def_days_back = 30;
-		require_once ('conf.php');
-		if (isset($_REQUEST["kto"])){
-			header('Content-type: application/json');
-			header('Cache-Control: no-cache, must-revalidate');
-			if (isset($_REQUEST["callback"])){
-				$callback = trim($_REQUEST['callback']);
-				echo $callback .'(';
-			}
-			if (isset($_REQUEST["jsoncallback"])){
-				$callback = trim($_REQUEST['jsoncallback']);
-				echo $callback .'(';
-			}
-			
-			$kto = test_req( "kto" );
-			// $kto_nr = test_req( "kto_nr" );
-			$zlecenie = addslashes(test_req( "zlec" ));
-			$del = test_req( "del", null);
-			if (!$del) {
-				$co = test_req( "co" );
-			}
-			$dni = test_req( "dni","");
-			$ile = test_req( "ile" );
-			$opis = addslashes(test_req( "opis" ));
-			$t_ip = getIP();
-
-			$id = test_req( "id",'');
-			
-			$zadanie = test_req( "zad","NULL");
-			
-			$table = "kart_pr_prace";
-			
-			if (substr($id,0,1)=='R'){
-				$id = substr($id,1);
-				$table = "kart_pr_prace_rtr";
-			}
-			
-			$mysqli = new_polacz_z_baza();
-			
-			if ($dni != ""){
-				$dzien = explode ( "," , $dni);
-				$query = "";
-				foreach ($dzien as $d){
-					$d = $d ."000";
-					if ($query != "")
-						$query .= ",";
-					$query .= "(\"$kto\",\"$co\",\"$ile\",$d,\"$zlecenie\",\"$opis\",\"$t_ip\")";
-				}
-				$query = "INSERT INTO `$table`(`user_id`,`kat_id`, `czas`, `data`, `zlecenie`, `opis`, `ip`) VALUES " .$query .";";
-		//		echo $query;
-				if ($mysqli->query($query))
-					echo json_encode(array('OK',$mysqli->insert_id,'INSERT','Zarejestrowano '.count($dzien)." dni.",0));
-				else echo json_encode(array($mysqli->error,0));
-			} else {
-				$kiedy = test_req( "kiedy" );
-				
-				$t_diff = (new DateTime())->getTimestamp() - $kiedy/1000;
-
-//				session_start();
-				if ($_SESSION["myuser"]["id"] != 1 && $kto != "1" 
-				&& $kto != "33" //Piotr Janusz
-				&& $kto != "40" //Marek Miziak
-				// && $kto != "51" //Andrzej Skrzypiec
-				// && $kto != "11" //Bieniarz
-				// && $kto != "37" //Korczyński Maciej
-				// && $kto != "15" //Lukoszek
-				// && $kto != "28" //Drejka
-				// && $kto != "30" //Forajter
-				// && $kto != "60" //Krystian
-				// && $kto != "53" //Suiski
-				// && $kto != "52" //Skwarek
-				// && $kto != "54" //Szweda
-				// && $kto != "27" //Ćwiklicki Zbigniew
-				// && $kto != "25" //Ciesielski
-				// && $kto != "59" //Kostka
-				&& $t_diff > ($def_days_back+4)*24*60*60){
-					echo json_encode(array('OK',0,'DELETE','Proszę ustawić prawidłową datę',0));
-				} else {
-					$suma_czasu = 0;
-					//pobranie danych o sumie czasu pracy w danym dniu
-					$query = "SELECT SUM( czas ) as suma FROM  `$table` WHERE data = $kiedy AND user_id = $kto";
-					$result = $mysqli->query($query);
-					if($row = $result->fetch_assoc())
-						$suma_czasu = $row['suma'];
-					
-					//odjecie czasu edytowanego wpisu
-					$czas_id = 0;
-					$query = "SELECT czas FROM  `$table` WHERE data = $kiedy AND user_id = $kto AND id = $id";
-					$result = $mysqli->query($query);
-					if($result)
-						if($row = $result->fetch_assoc())
-							$czas_id = $row['czas'];
-				
-					$suma_czasu -= $czas_id;
-
-					//pobranie danych o sumie czasu pracy w dla danego zadania
-					// $query = "SELECT SUM( czas )/60 as czas FROM  `$table` WHERE zadanie = $zadanie AND user_id = $kto";
-					$query = "SELECT SUM( czas )/60 as czas FROM  `$table` WHERE zadanie = $zadanie;";
-					// $query = "SELECT z.rbh, SUM( p.czas ) /60 AS czas FROM  `kart_pr_prace` p LEFT JOIN  `kart_pr_zadania` z ON z.id = p.zadanie WHERE zadanie =1";
-					
-					$result = $mysqli->query($query);
-					if($row = $result->fetch_assoc()){
-						$czas_wyk = $row['czas'];
-					}
-					
-					if ($del){
-						$query = "DELETE FROM `$table` WHERE `$table`.`id` = ".$id.";";
-						if ($mysqli->query($query))
-							echo json_encode(array('OK',$id,'DELETE','Karta skasowana',$suma_czasu));
-						else echo json_encode(array($mysqli->error,0));		
-					} else {
-						
-						$suma_czasu += $ile;
-						if ($id != 'null' && $id != ''){
-							// $query = "UPDATE `$table` SET `user_id` = \"$kto\",`kat_id` = \"$co\", `czas` = \"$ile\", `data` = $kiedy, `zlecenie` = \"$zlecenie\", `opis` = \"$opis\", `ip` = \"$t_ip\", `zadanie` = $zadanie, timestamp = NULL WHERE `$table`.`id` = ".$id.";";
-							$query = "UPDATE `$table` SET `user_id` = \"$kto\",`kat_id` = \"$co\", `czas` = \"$ile\", `data` = $kiedy, `zlecenie` = \"$zlecenie\", `opis` = \"$opis\", `ip` = \"$t_ip\", `zadanie` = $zadanie WHERE `$table`.`id` = ".$id.";";
-		//					echo $query;
-							if ($mysqli->query($query)){
-								if ($mysqli->affected_rows)
-									echo json_encode(array('OK',$id,'UPDATE','Karta poprawiona',$suma_czasu, $czas_wyk));
-								else
-									echo json_encode(array('OK',$id,'UPDATE','Karta bez zmian',$suma_czasu, $czas_wyk));
-							} else echo json_encode(array($mysqli->error,0));
-						}
-						else{
-							$query = "INSERT INTO `$table`(`user_id`,`kat_id`, `czas`, `data`, `zlecenie`, `opis`, `zadanie`, `ip`) VALUES (\"$kto\",\"$co\",\"$ile\",$kiedy,\"$zlecenie\",\"$opis\",$zadanie,\"$t_ip\");";
-							$czas_wyk += $ile/60;
-							if ($mysqli->query($query))
-								echo json_encode(array('OK',$mysqli->insert_id,'INSERT','Praca zarejestrowana',$suma_czasu, $czas_wyk));
-							else echo json_encode(array($mysqli->error,0));
-						}
-					}
-					$file = "log_kp.txt";
-					file_put_contents($file, "data = ".date("c")."\n", FILE_APPEND | LOCK_EX);
-					file_put_contents($file, "userid = ".$_SESSION["myuser"]["id"]."\n", FILE_APPEND | LOCK_EX);
-					file_put_contents($file, $query ."\n", FILE_APPEND | LOCK_EX);
-				}
-			}
-			$mysqli->close();
-			if (isset($_REQUEST["callback"]) || isset($_REQUEST["jsoncallback"]))
-				echo ')';
-			exit;
-		}
-		switch (getIP()){
-			case "192.168.34.220":	//Ja
-//				header('Location: http://portal.kopex.com.pl/Blokowanie/Blokowanie.html');
-//				exit;
-//				echo $date->getTimestamp();
-//				if ( $date->getTimestamp() >  1373629000 && $date->getTimestamp() <  1373629120){
-//					echo "Strona zablokowana przez Kopex S.A...</br>Pracownik o numerze stałym \"00913\" proszony jest o kontakt z działem IT.";
-//					exit;
-//				}
-			break;
-			case "192.168.34.237":	//Drejka
-//				header('Location: http://portal.kopex.com.pl/Blokowanie/Blokowanie.html');				
-//				exit;
-//				if ( $date->getTimestamp() >  1373629000 && $date->getTimestamp() < 1373629120){
-//					echo "Strona zablokowana przez Kopex S.A...</br>Pracownik o numerze stałym \"00597\" proszony jest o kontakt z działem IT.";
-//					exit;
-//				}
-			break;
-			case "192.168.34.59":	//Kamil				
-//				header('Location: http://portal.kopex.com.pl/Blokowanie/Blokowanie.html');				
-//				exit;
-			break;
-			case "192.168.34.131":	//Kusztal
-//				header('Location: http://portal.kopex.com.pl/Blokowanie/Blokowanie.html');				
-//				exit;
-			break;			
-			case "192.168.34.120":	//Pilch
-//				header('Location: http://portal.kopex.com.pl/Blokowanie/Blokowanie.html');				
-//				exit;
-			break;
-		}
+function test_req( $req , $default = "nulll"){
+  if (isset($_REQUEST[$req]))
+    return trim($_REQUEST[$req]);
+  if (!$default || $default != "nulll") {
+    return $default;
+  };
+  echo 'brak parametru \"' .$req .'\"';
+  exit;
+}
 
 ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -215,13 +50,13 @@ if ( !isset( $_SESSION["myusername"] ) ){
 		</style>
   <title>Karty pracy TR</title>
   </head>
-	<body>
-		<div style="float:right;font-size: 0.8em;margin-right: 1em;">Zalogowano jako: <?php echo $_SESSION["myuser"]["nazwa"]; ?></div><br/>
-		<form action="baza_karta.php" style="background-image:url(images/logo_km100.png);background-repeat: no-repeat; ">
+	<body style="background-image:url(images/logo_km100.png);background-repeat: no-repeat; ">
+		<div id="logged_as" style="float:right;font-size: 0.8em;margin-right: 1em;"></div><br/>
+		
 			<table style="margin:auto; width: 75%; max-width: 800px;">
 				<colgroup>
 					<col width="250">
-					<col width="100%">
+					<col width="75%">
 				</colgroup>
 				<tbody>
 					<tr><th>Nazwisko i Imię:</th><td><input id="kto_u" name="kto_u" /></td></tr>
@@ -243,24 +78,12 @@ if ( !isset( $_SESSION["myusername"] ) ){
 						<th>Opis czynności:</th>
 						<td><textarea type="text" id="zad_opis" name="zad_opis" rows="5" disabled style="width:100%;"></textarea></td>
 					</tr>
-					<tr>
-						<th>Wykonano pracę dla działu:</th>
-						<td><select id="dzial" name="dzial"><option value="null"></option></select></td>
-					</tr>
 					<tr class="n_l4">
 						<th><label for="czas">Czas pracy w godzinach:</label></th>
 						<td><input id="czas" name="czas" /></td>
 					</tr>
-					<tr class="n_l4">
-						<th><label for="zlec">Numer zlecenia / zamówienia:</label></th>
-						<td><input type="text" id="zlec" name="zlec" /></td>
-						<td>PNU Projekt nr <select id="pnu"><option value="null"></option></select>
-						<br/>Zadanie <input type="text" id="pnu_zad" name="pnu_zad" /></td>
-						<td>Ostatnio wpisywane:<select id="zlec_last"></select></td>
-					</tr>
 					<tr><th>Kategoria prac:</th><td id="kategorie"></td></tr>
 					<tr><td colspan="3">Opis:<br/><textarea id="opis" rows="6" name="opis" style="width:100%;"></textarea></td></tr>
-					<tr class="n_l4"><td>Ostatnio wpisywane:<select id="opis_last"><option value="null"></option></select><br/><div id="opis_sort">Sortuj alfabetycznie</div></td></tr>
 					<tr><td colspan="3"></td></tr>
 					<tr>
 						<td colspan="1"></td>
@@ -273,15 +96,9 @@ if ( !isset( $_SESSION["myusername"] ) ){
 					</tr>
 				</tbody>
 			</table>
-<!--			<input type="submit" value="Gotowe" onsubmit="return validateForm()" method="post"> -->
-		</form>
 	</body>
-<?php
-	if (isset($_REQUEST["user_id"]) && $_SESSION["myuser"]["kart_perm"] != "0") 
-		echo '<script type="text/javascript" src="baza_karta.php?user_id='.$_REQUEST["user_id"].'"></script>';
-	else 
-		echo '<script type="text/javascript" src="baza_karta.php"></script>';
-?>
+	<script type="text/javascript" src="baza_obj.php?user_id=<?php echo test_req( "user_id",$_SESSION["myuser"]["id"]); ?>"></script>
+	<script type="text/javascript" src="baza_karta.php?user_id=<?php echo test_req( "user_id",$_SESSION["myuser"]["id"]); ?>"></script>
 	<script type="text/javascript" src="jquery.min.js"></script>
 	<script type="text/javascript" src="jquery-ui.min.js"></script>
 	<script type="text/javascript" src="jquery.ui.datepicker-pl.js"></script>
@@ -292,548 +109,217 @@ if ( !isset( $_SESSION["myusername"] ) ){
 
 	<script type="text/javascript" src="date.js"></script>
 	<script>
-	
-		var days_back = <?php echo $def_days_back;?>;
-			
 		_user_id = <?php echo $_SESSION["myuser"]["id"];?>;
+		_user_name = '<?php echo $_SESSION["myuser"]["nazwa"];?>';
 		_prac_id = '<?php if (isset($_REQUEST["id"])) echo $_REQUEST["id"]; else echo 'null';?>';
-		_kat_id = <?php if (isset($_REQUEST["id_k"])) echo $_REQUEST["id_k"]; else echo 'null';?>;
-		_dzia_id = <?php if (isset($_REQUEST["id_d"])) echo $_REQUEST["id_d"]; else echo 'null';?>;
 		_copy_id = '<?php if (isset($_REQUEST["copy_id"])) echo $_REQUEST["copy_id"]; else echo 'null';?>';
 		_l4 = <?php if (isset($_REQUEST["l4"])) echo "true"; else echo 'null';?>;
 		var sum_user_id = <?php if (isset($_REQUEST["user_id"])) echo $_REQUEST["user_id"]; else echo 'null';?>;
 
+    $('#logged_as').text('Zalogowano jako: '+_user_name);
+    
+		var days_back = 30;
+			
 		if (typeof console === "undefined")
 			console = {log:function(){}};
 		else if (typeof console.log === "undefined")
 			console.log = function(){};
 			
-		if (_user_id == 1){	days_back += 340; }
-//		if ("<?php echo $_SESSION["myuser"]["dzial"];?>" == "TR-1")
-//			$("#zad").parent().parent().show();
-			
 		var today = new Date();
 		
-		var prev = new Date();
-		for (var i=1; i<=days_back;i++){
-			prev.setDate(today.getDate() - i);
-			if (prev.getDay() == 0 || prev.getDay() == 6)
-				days_back++;
-			else if(swieta[prev.getMonth()+1] && swieta[prev.getMonth()+1][prev.getDate()])
-				days_back++;
-		}
-		
-		var zlec_last = [];
 		var opis_last = [];
 		var opis_last_arch = [];
 		
-		$(function() {
-			if (!_l4){
-				$(".l4").hide();
-			} else {
-				$(".n_l4").hide();
-				$("#copy").after('<div id="urlop" style="display:none;">Karta urlopowa</div>')
-			}
-		
-			Globalize.culture("de-DE");
-			$.widget( "ui.timespinner", $.ui.spinner, {
-				options: {
-					// seconds
-					step: 15 * 60 * 1000,
-					min: +Globalize.parseDate( "00:15"),
-					max: +Globalize.parseDate( "12:00"),
-					// hours
-					page: 4
-				},
+    $("#copy").after('<div id="urlop" style="display:none;">Karta urlopowa</div>')
 
-				_parse: function( value ) {
-					if ( typeof value === "string" ) {
-						// already a timestamp
-						if ( Number( value ) == value ) {
-						  return Number( value );
-						}
-						return +Globalize.parseDate( value );
-					}
-					return value;
-				},
+    if (!_l4){
+      $(".l4").hide();
+    } else {
+      $(".n_l4").hide();
+    }
+  
+    Globalize.culture("de-DE");
+    $.widget( "ui.timespinner", $.ui.spinner, {
+      options: {
+        step: 15 * 60 * 1000,
+        min: +Globalize.parseDate( "00:15"),
+        max: +Globalize.parseDate( "12:00"),
+        page: 4
+      },
 
-				_format: function( value ) {
-					return Globalize.format( new Date(value), "t" );
-				}
-			});
-			
-			if (Math.abs((new Date()).getTime()/1000 - serv_epoch) > 24*60*60)
-				alert("Proszę ustawić prawidłową datę.");
-
-			$("#czas").timespinner().timespinner( "value", "01:00" );
-//			$("#czas").parent().css("width","100%");
-//			$("#czas").spinner({
-//				min: 0.25,
-//				max: 12,
-//				step: 0.25,
-//				numberFormat: "n"
-// 		}).spinner( "value", 1 );
-
-			$('#gotowe').button().click(function(){send(false);});
-			$('#urlop').button().click(function(){send(false,true);});
-			$('#close').button().click(function(){window.close();});
-			$('#del').button().show().click(function(){
-				if (confirm('Czy napewno chcesz skasować kartę ?')){
-					send(true);
-				}
-			});
-
-//			$("#data").datepicker({ minDate: -1,maxDate: 0});
-//			$("#data").datepicker();
-			// _od.datetimepicker({
-				// timeText :  "Czas",
-				// hourText : "godz.",
-				// minuteText :  "min.",
-				// currentText :  "Teraz",
-				// closeText :  "Gotowe"
-			// });
-//			_od.datetimepicker('setDate', new Date());
-			zadania_sort = [];
-			for (var z in zadania){
-				zadania_sort.push(zadania[z]);
-			}
-			zadania_sort.sort(function(a,b) { if (a.nazwa > b.nazwa ) return 1; if (a.nazwa < b.nazwa ) return -1; return 0;} );
-			// for (var z in zadania){
-				// if (zadania[z].termin && (zadania[z].termin < ((new Date()).getTime() - 24*60*60*1000)))
-					// continue;
-				// if ((zadania[z].aktywny == "1") && (zadania[z].deleted == 0))
-					// $('#zad').append('<option value=\"'+zadania[z].id+'\" title="'+zadania[z].opis+'">'+zadania[z].nazwa+'</option>');
-			// }
-			for (var z in zadania_sort){
-				var sort_z = zadania_sort[z];
-				// console.log(sort_z);
-				// ukrycie zadań z przekroczonym terminem
-				// if (sort_z.termin && (sort_z.termin < ((new Date()).getTime() - 24*60*60*1000))){
-					// console.log(sort_z);
-					// continue;
-				// }
-				if ((sort_z.aktywny == "1") && (sort_z.deleted == 0)){
-					var t_title = sort_z.nazwa;
-					var t_par_id = sort_z.par_id;
-          var par_nazwa = '???';
-					if (!t_par_id) {
-						t_title = sort_z.typ + ' ' + sort_z.zlecenie + " -> " + t_title;
-					} else {
-            par_nazwa = foldery[t_par_id].nazwa;
-						do {
-							t_title = foldery[t_par_id].nazwa + " -> " + t_title;
-							t_par_id = foldery[t_par_id].par_id;
-						} while (t_par_id > 3);
-						// t_title = foldery[t_par_id].nazwa + " -> " + t_title;
-					}
-					// t_title = zadania[t_par_id].nazwa + " -> " + t_title;
-            // console.log(sort_z.nazwa, t_par_id, t_title);
-
-					// var opis = sort_z.nazwa+' ('+sort_z.typ+' '+sort_z.zlecenie+')';
-					var opis = t_title;
-					if (sort_z.rbh > 0)
-						opis += ' (limit = ' + sort_z.rbh +' rbh)';
-					// oznaczenie zadań z przekroczonym terminem
-
-					var _style = '';
-					if (sort_z.termin && (sort_z.termin < ((new Date()).getTime() - 24*60*60*1000))){
-            _style = ' style="color:brown;"';
-					}
-					if (sort_z.par_id == 994) {
-            console.log(sort_z, opis, par_nazwa);
-            
+      _parse: function( value ) {
+        if ( typeof value === "string" ) {
+          // already a timestamp
+          if ( Number( value ) == value ) {
+            return Number( value );
           }
-          
-          $('#zad').append('<option value=\"'+sort_z.id+'\" title="'+sort_z.opis+'"'+_style+'>'+opis+'</option>');
-				} else {
-					// console.log(sort_z);
-				}
-				// console.log(sort_z.termin);
-				// zadania[$('#zad').val()].rbh)
-			}
+          return +Globalize.parseDate( value );
+        }
+        return value;
+      },
 
-			// for (var z in zadania_sort){console.log(zadania_sort[z]);}
-			
-			function zad_change(){
-//				console.log($(this).val());
-//				console.log(zadania[$(this).val()]);
-				var temp_dz = $('#dzial').val();
-				if ($('#zad').val() != 'null'){
-					var _zad = zadania[$('#zad').val()];
-					console.log(_zad);
-					$('#zad_opis').val(_zad.opis);
-					$('#dzial').val(_zad.dzial_zlec).prop('disabled',true);
-					$('#zlec').val(_zad.zlecenie).prop('disabled',true);
-					$('#zlec_last').parent().hide();
-					// if ($('#zlec').val().indexOf("PNU Projekt nr ") == 0){
-					if (_zad.typ == "PNU"){
-//						console.log("test");
-						$('#kat_4_401').hide();
-//						$('#kat_4_inne > *').hide();
-//						$('#kat_4_451').show();
-//						$("label[for='kat_4_451']").show();
+      _format: function( value ) {
+        return Globalize.format( new Date(value), "t" );
+      }
+    });
+    
+    if (Math.abs((new Date()).getTime()/1000 - serv_epoch) > 24*60*60)
+      alert("Proszę ustawić prawidłową datę.");
 
-						$('#kat_4_454').hide();
-						$("label[for='kat_4_454']").hide();
-						$('#kat_4_456').hide();
-						$("label[for='kat_4_456']").hide();
+    $("#czas").timespinner().timespinner( "value", "01:00" );
 
-						$('#kat_4_402').show();
-						$("#pnu").parent().show();
-						$("#pnu_zad").parent().show();
-						$("#zlec").parent().hide();
-						var t_pnu = _zad.zlecenie.split('/');
-						$("#pnu").val(t_pnu[0]).prop('disabled', 'disabled');
-						if (t_pnu[1]) {
-							$("#pnu_zad").val(t_pnu[1]).prop('disabled', 'disabled');
-						}
-					} else {
-						$('#kat_4_401').show();
-						$('#kat_4_inne > *').show();
-						$('#kat_4_402').hide();
-						$("#pnu").parent().hide();
-						$("#pnu_zad").parent().hide();
-						$("#zlec").parent().show();
-						$("#pnu").prop('disabled', false);
-						$("#pnu_zad").prop('disabled', false);
-					}
-				} else {
-					$('#zad_opis').val('');
-					$('#dzial').prop('disabled',false);
-					$('#zlec').prop('disabled',false);
-					$('#zlec_last').parent().show();
-					$('#kat_4_401').show();
-					$('#kat_4_402').show();
-					$('#kat_4_inne > *').show();
-					$("#pnu").parent().hide();
-					$("#pnu_zad").parent().hide();
-					$("#zlec").parent().show();
-					$("#pnu").prop('disabled', false);
-					$("#pnu_zad").prop('disabled', false);
-				}
-				if (temp_dz != $('#dzial').val())
-					dzial_change();
-			};
-			$('#zad').change(zad_change);
-			for (var d in dzialy){
-				$('#dzial').append('<option value=\"'+d+'\" title="'+dzialy[d].opis+'">'+dzialy[d].nazwa+'</option>');
-				$('#kategorie').append('<div id="kat_'+d+'" class="kategorie"></div>');
-			}
-			$('.kategorie').hide();
-			function dzial_change(){
-				clear_err();
-				$('.kategorie').hide();
-				$('#kat_5').show();
-				$('#kat_'+$("#dzial option:selected").val()).show();
-				$("#kategorie input:checked").attr('checked',null);
-				if ($("#dzial option:selected").val() == 5) {
-					$('#urlop').show();
-					$('#kat_5_545').show();
-					$("label[for='kat_5_545']").show();
-					$('#kat_5_548').show();
-					$("label[for='kat_5_548']").show();
-					$('#kat_5_558').show();
-					$("label[for='kat_5_558']").show();
-//					console.log("urlop");//.show();)
-				} else {
-					$('#urlop').hide();
-					$('#kat_5_545').hide();
-					$("label[for='kat_5_545']").hide();
-					$('#kat_5_548').hide();
-					$("label[for='kat_5_548']").hide();
-					$('#kat_5_558').hide();
-					$("label[for='kat_5_558']").hide();
-//					console.log("nie urlop");//.show();)
-				}
-				if (!_l4){	//ukrycie urlopu i L4
-					$("#kat_5_545").hide();
-					$("label[for='kat_5_545']").hide();	
-					$("#kat_5_548").hide();
-					$("label[for='kat_5_548']").hide();
-				}
-				
-//				alert($("#dzial option:selected").val());
-			}
-			$('#dzial').change(dzial_change);
-			
-			$("#pnu").parent().hide();
-			$("#pnu_zad").parent().hide();
-			for (var p in pnu){
-				$("#pnu").append('<option value=\"'+p+'\" title="'+pnu[p].opis+'">'+pnu[p].nr+'</option>');
-			}
-			
-			for (var k in kategorie){
-				var kat2 = [];
-				for (var k2 in kategorie[k])
-				//sortowanie po nazwach kategorii
-					kat2.push(kategorie[k][k2]);
-					kat2.sort(function(a,b) { 
-						if ((a.ma_podgr && b.ma_podgr) || (!a.ma_podgr && !b.ma_podgr))
-							return a.nazwa > b.nazwa;
-						else if (a.ma_podgr)
-							 return false;							
-					} );
-					
-//console.log(kat2);
-//console.log(k);
-//console.log(kategorie[k]);
-//console.log(kategorie[k]);
-//				for (var k2 in kategorie[k]){
+    $('#gotowe').button().click(function(){send(false);});
+    $('#urlop').button().click(function(){send(false,true);});
+    $('#close').button().click(function(){window.close();});
+    $('#del').button().show().click(function(){
+      if (confirm('Czy napewno chcesz skasować kartę ?')){
+        send(true);
+      }
+    });
 
-				for (var k3 in kat2){
-					var k2 = kat2[k3].id;
-					if (_l4 && !(kategorie[k][k2].long_time/1)) continue;
-					if (k2 == 450 && _user_id != 40 && _user_id != 33) continue;	//projekty tylko dla Marka i Janusza z TP
-					if (kategorie[k][k2].ma_podgr){
-						$('#kat_'+k).append('<div id="kat_'+k+'_'+kategorie[k][k2].id+'"><button>Rozwiń</button><span class="def" title="'+kategorie[k][k2].opis+'">'+kategorie[k][k2].nazwa+'</span><div class="sub" style="margin-left: 2em"></div></div>');
-						$('#kat_'+k+'_'+kategorie[k][k2].id+' > .sub').hide();
-						$('#kat_'+k+'_'+kategorie[k][k2].id+' > button').button({icons: {primary: "ui-icon-circle-plus"},text: false}).click(function(event){
-						var icons = $(this).button( "option", "icons" );
-						if (icons.primary == "ui-icon-circle-plus")
-							$(this).button( "option", "icons", { primary: "ui-icon-circle-minus"});
-						else
-							$(this).button( "option", "icons", { primary: "ui-icon-circle-plus"});
-							event.preventDefault();
-							$('.sub',$(this).parent()).toggle();
-						});
-						for (var k3 in kategorie[k][k2].ma_podgr){
-							$('#kat_'+k+'_'+kategorie[k][k2].id+' > .sub').append('<input type="radio" id="kat_'+k+'_'+k3+'" name="prace" value="'+k3+'" style="width:2em;" /><label for="kat_'+k+'_'+k3+'">'+kategorie[k][k2].ma_podgr[k3].nazwa+'<br/></label>');
-						}
-					}
-					else {
-						if (!$('#kat_'+k+'_inne').length)
-							$('#kat_'+k).append('<br/><div id="kat_'+k+'_inne"></div>');
-						$('#kat_'+k+'_inne').append('<input type="radio" id="kat_'+k+'_'+kategorie[k][k2].id+'" name="prace" value="'+kategorie[k][k2].id+'" style="width:2em;" /><label for="kat_'+k+'_'+kategorie[k][k2].id+'" title="'+kategorie[k][k2].opis+'">'+kategorie[k][k2].nazwa+'<br/></label>');
-					}
-				}
-				if (k==5 && <?php if ($_SESSION["myuser"]["id"] == 38) { echo 'true'; } else { echo 'false'; }?>) {
-					$('#kat_'+k+'_inne').append('<input type="radio" id="kat_'+k+'_600" name="prace" value="600" style="width:2em;" /><label for="kat_'+k+'_600" title="Czytanie Koranu">Czytanie Koranu</label><br/>');
-				}
-			}
-			for (k in karty){
-				var opis = karty[k].opis_p;//karty[k].
-				if (opis != '' && $.inArray(opis, opis_last) == -1)
-					opis_last.push(opis);
-				if ($.inArray(karty[k].zlec, zlec_last) == -1)
-					zlec_last.push(karty[k].zlec);
-			}
-			zlec_last.sort();
-			for (z in zlec_last)
-				$('#zlec_last').append('<option>'+zlec_last[z]+'</option>');
-			
-			opis_last_arch = opis_last.slice(0);
+    for (var zi in o_zadania){
+      var z = o_zadania[zi];
+      var opis = z.nazwa;
+      for (var pi in z.parents) {
+        opis = o_projekty[z.parents[pi]].nazwa + ' -> ' + opis;
+      }
+      if (z.json && z.json.rbh > 0)
+        opis += ' (limit = ' + z.json.rbh +' rbh)';
+      var _style = '';
+      // oznaczenie zadań z przekroczonym terminem
+      if (z.termin && (z.termin < ((new Date()).getTime() - 24*60*60*1000))){
+        _style = ' style="color:brown;"';
+      }
+      $('#zad').append('<option value=\"'+z.id+'\" title="'+z.opis+'"'+_style+'>'+opis+'</option>');
+if (z.par_id == 994) { console.log(z, opis); }
+    }
+    
+    function zad_change(){
+      if ($('#zad').val() != 'null'){
+        var _zad = zadania[$('#zad').val()];
+        $('#zad_opis').val(_zad.opis);
+        console.log(_zad);
+        if (_zad.id == 504) { 
+          $('#urlop').show(); 
+        } else {
+          $('#urlop').hide();
+        }
+      } else {
+        $('#zad_opis').val('');
+      }
+    };
+    $('#zad').change(zad_change);
+    
+    $('input').change(function() { clear_err(); });
+    $('select').click(function() { clear_err(); });
+    $('#czas').parent().click(function() { clear_err(); });
+    $('#data').click(function() { clear_err(); });
+    $('textarea').keypress(function() { clear_err(); });
+    
+    $("#data_od").datepicker({minDate: -(days_back+30), maxDate: (days_back+30)}).datepicker('setDate', new Date()).click(function() { clear_err(); });
+    $("#data_do").datepicker({minDate: -(days_back+30), maxDate: (days_back+30)}).datepicker('setDate', new Date()).click(function() { clear_err(); });
 
-			// if ((user_info.dzial == "TR-1" && user_info.sekcja == "AU") 
-			if ((user_info.dzial == "TR-1") 
-			|| (user_info.dzial == "TR-2")
-			|| (user_info.dzial == "TR-3")
-			|| (user_info.dzial == "TP")
-			|| (true)
-			|| (user_info.id == 1)
-			){
-				if (!_l4)
-					$("#dzial").parent().parent().hide();
-				$("#zlec").parent().parent().hide();
-			}
-
-			
-			$('#opis_sort').button().click(function(){
-				$('#opis_last').empty();
-//				$('#opis_last').append('<option value="null"></option>');
-				opis_last = opis_last_arch.slice(0)
-				if ($('#opis_sort').button( "option", "label") == "Sortuj alfabetycznie"){
-					opis_last.sort();
-					$('#opis_sort').button( "option", "label","Sortuj wg czasu");
-				} else
-					$('#opis_sort').button( "option", "label","Sortuj alfabetycznie");
-				for (o in opis_last){
-					var opis = opis_last[o];
-					if (opis.length > 22)
-						opis = opis.substring(0, 25)+"...";
-					$('#opis_last').append('<option value="'+o+'" title="'+opis_last[o]+'">'+opis+'</option>');
-				}
-			});
-			
-			for (o in opis_last){
-				var opis = opis_last[o];
-				if (opis.length > 22)
-					opis = opis.substring(0, 25)+"...";
-				$('#opis_last').append('<option value="'+o+'" title="'+opis_last[o]+'">'+opis+'</option>');
-			}
-
-			$('#zlec_last').change(function(){
-//				console.log("#zlec_last");
-				var opis = $(this).val();
-				$('#zlec').val(opis);
-//				console.log(opis);
-				if (opis.indexOf("PNU Projekt nr ") == 0)
-					$("#pnu").val(opis.substring(15));
-				else
-					$("#pnu").val("null");
-			});
-			$('#opis_last').change(function(){
-				$('#opis').val(opis_last[$(this).val()]);
-			});
-//console.log(opis_last);
-//$('#zlec_last').hide();
-			$('input').change(function() { clear_err(); });
-			$('select').click(function() { clear_err(); });
-			$('input[name=prace]').change(function() { 
-				if( $(this).val() > 430 && $(this).val() < 450) {
-					$("#pnu").parent().show();
-					$("#zlec").parent().hide();
-				} else {
-					$("#pnu").parent().hide();
-					$("#zlec").parent().show();
-				}
-			});
-			$('#czas').parent().click(function() { clear_err(); });
-			$('#data').click(function() { clear_err(); });
-			$('textarea').keypress(function() { clear_err(); });
-			
-			$("#data_od").datepicker({minDate: -(days_back+30), maxDate: (days_back+30)}).datepicker('setDate', new Date()).click(function() { clear_err(); });
-			$("#data_do").datepicker({minDate: -(days_back+30), maxDate: (days_back+30)}).datepicker('setDate', new Date()).click(function() { clear_err(); });
-
-
-//			var temp_date = new Date();
-			if (_copy_id != null && _copy_id != 'null'){
-				var obj = find_id(_copy_id);
+    if (_copy_id != null && _copy_id != 'null'){
+      var obj = find_id(_copy_id, karty);
 //				console.log(obj);
-				if (obj){
-					$('#kto_u').val('<?php echo $_SESSION["myuser"]["nazwa"];?>').attr('disabled', 'disabled');
-					if (today.getDate() < 10) {
-						$("#data").datepicker({ minDate: -days_back,maxDate: 0}).datepicker('setDate', new Date());
-					} else {
-						console.log('-1M');
-						$("#data").datepicker({ minDate: '-1M', maxDate: 0}).datepicker('setDate', new Date());
-					}
-					// '+1M +10D'
-					$('#czas').timespinner( "value",(obj.ile-(obj.ile%60))/60+":"+(obj.ile%60));
-					
-					$('#dzial').val(obj.id_dzial);
-					$('#kat_'+obj.id_dzial).show();
-					$('input[name=prace][value='+obj.kat_id+']').attr('checked','checked');
-					if ($('input[name=prace][value='+obj.kat_id+']').parent().hasClass('sub'))
-						$('input[name=prace][value='+obj.kat_id+']').parent().show();
-					$('#opis').val(obj.opis_p);
-					$('#zlec').val(obj.zlec);
-					
-					$('#zad').val(obj.zad);
-					zad_change();
-					if (obj.kat_id > 430 && obj.kat_id < 450){
-						if (obj.zlec.indexOf("PNU Projekt nr ") == 0){
-							// console.log(obj.zlec.substring(15));
-							if (!obj.zad) {
-								var t_pnu = obj.zlec.substring(15).split('/');
-								$("#pnu").val(t_pnu[0]);
-								$("#pnu_zad").val(t_pnu[1]);
-							}
-							$("#pnu").parent().show();
-							$("#zlec").parent().hide();
-						}					
-					}
-					<?php if (isset($_REQUEST["day"])) echo 'var xday = new Date(); xday.setTime('.$_REQUEST["day"].'); $("#data").datepicker("setDate", xday);';?>
-					<?php if (isset($_REQUEST["add"])) echo '$("#gotowe").click();';?>
-				}				
-			}
-			
-			if (_prac_id != null && _prac_id != 'null'){
-				$('#copy').button().click(function(){
-					window.location.href = window.location.href.replace("?id=","?copy_id=").replace("&id=","&copy_id=");
-				});
-				var obj = find_id(_prac_id);
-				console.log(obj);
-				if (obj){
-					var temp_date = new Date();
-					temp_date.setTime(obj.data);
-					if (new Date() - temp_date > 86400000*(days_back+1)){
-						$('#gotowe').hide();
-						$('#del').hide();
-						$("#data").datepicker();
-						disable_all();
-						$('#czas').timespinner('option', "max", +Globalize.parseDate( "23:00"));
-					} else {
-						$("#data").datepicker({ minDate: -days_back, maxDate: 0});
-					}
-					$('#kto_u').val(obj.kart_user).attr('disabled', 'disabled');
-					if (temp_date.getHours() == 23)
-						temp_date.setHours(temp_date.getHours()+1);
-					
-					$("#data").datepicker('setDate',temp_date);
-					$('#czas').timespinner( "value",(obj.ile-(obj.ile%60))/60+":"+(obj.ile%60));
-					
-					$('#dzial').val(obj.id_dzial);
-					$('#kat_'+obj.id_dzial).show();
-					$('input[name=prace][value='+obj.kat_id+']').attr('checked','checked');
-					if ($('input[name=prace][value='+obj.kat_id+']').parent().hasClass('sub'))
-						$('input[name=prace][value='+obj.kat_id+']').parent().show();
-					$('#opis').val(obj.opis_p);
-					$('#zlec').val(obj.zlec);
-					
-					$('#zad').val(obj.zad);
-					zad_change();
-					
-					if (obj.kat_id > 430 && obj.kat_id < 450){
-						if (obj.zlec.indexOf("PNU Projekt nr ") == 0){
-							// console.log(obj.zlec.substring(15));
-							if (!obj.zad) {
-								var t_pnu = obj.zlec.substring(15).split('/');
-								$("#pnu").val(t_pnu[0]);
-								$("#pnu_zad").val(t_pnu[1]);
-							}
-							$("#pnu").parent().show();
-							$("#zlec").parent().hide();
-						}					
-					}
-					$('#gotowe > .ui-button-text').text( "Edytuj" );
-				} else {
-					alert("Brak karty o podanym ID");
-					window.close();
-				}
-			} else {
-				$('#copy').hide();
-				$("#data").datepicker({ minDate: -days_back,maxDate: 0});
-				$('#kto_u').val('<?php echo $_SESSION["myuser"]["nazwa"];?>').attr('disabled', 'disabled');
-				if (_kat_id && _dzia_id){
-					$('#dzial').val(_dzia_id);
-					$('#kat_'+_dzia_id).show();
-					$('input[name=prace][value='+_kat_id+']').attr('checked','checked');
-					if ($('input[name=prace][value='+_kat_id+']').parent().hasClass('sub'))
-						$('input[name=prace][value='+_kat_id+']').parent().show();
-				}
-				$("#data").datepicker('setDate', new Date());
-				<?php if (isset($_REQUEST["day"])) echo 'var xday = new Date(); xday.setTime('.$_REQUEST["day"].'); $("#data").datepicker("setDate", xday);';?>
-				$('#del').hide();
-			}
-			
-			function disable_all(){
-				$("#czas").timespinner("disable");
-				$("#data").prop('disabled', 'disabled');
-				$("#dzial").prop('disabled', 'disabled');
-				$("textarea").prop('disabled', 'disabled');
-				$("input").each(function(){
-					$(this).prop('disabled','disabled');
-				});
-				$("#zlec_last").prop('disabled', 'disabled');
-				$("#opis_last").prop('disabled', 'disabled');
-				$("#pnu").prop('disabled', 'disabled');
-			}
-			
-//		console.log(sum_user_id);
-//		console.log(_user_id);
-//		console.log(_prac_id);
-			if (sum_user_id && _user_id == 1 && karty[0])
-				$('#kto_u').val(karty[0].kart_user).attr('disabled', 'disabled');
-			
-			if (sum_user_id != null && _user_id != 1 && sum_user_id != _user_id){
-				$('#copy').hide();
-				$('#gotowe').hide();
-				$('#del').hide();
-				disable_all();
-			}
-
-		});
-
+      if (obj){
+        $('#kto_u').val('<?php echo $_SESSION["myuser"]["nazwa"];?>').attr('disabled', 'disabled');
+        if (today.getDate() < 10) {
+          $("#data").datepicker({ minDate: -days_back,maxDate: 0}).datepicker('setDate', new Date());
+        } else {
+          console.log('-1M');
+          $("#data").datepicker({ minDate: '-1M', maxDate: 0}).datepicker('setDate', new Date());
+        }
+        // '+1M +10D'
+        $('#czas').timespinner( "value",(obj.ile-(obj.ile%60))/60+":"+(obj.ile%60));
+        $('#opis').val(obj.opis_p);
+        $('#zad').val(obj.zad);
+        zad_change();
+        <?php if (isset($_REQUEST["day"])) echo 'var xday = new Date(); xday.setTime('.$_REQUEST["day"].'); $("#data").datepicker("setDate", xday);';?>
+        <?php if (isset($_REQUEST["add"])) echo '$("#gotowe").click();';?>
+      }				
+    }
+    
+    if (_prac_id != null && _prac_id != 'null'){
+      $('#copy').button().click(function(){
+        window.location.href = window.location.href.replace("?id=","?copy_id=").replace("&id=","&copy_id=");
+      });
+      var obj = find_id(_prac_id, karty);
+      console.log(obj);
+      if (obj){
+        var temp_date = new Date();
+        temp_date.setTime(obj.data);
+        if (new Date() - temp_date > 86400000*(days_back+1)){
+          $('#gotowe').hide();
+          $('#del').hide();
+          $("#data").datepicker();
+          disable_all();
+          $('#czas').timespinner('option', "max", +Globalize.parseDate( "23:00"));
+        } else {
+          $("#data").datepicker({ minDate: -days_back, maxDate: 0});
+        }
+        $('#kto_u').val(obj.kart_user).attr('disabled', 'disabled');
+        if (temp_date.getHours() == 23)
+          temp_date.setHours(temp_date.getHours()+1);
+        
+        $("#data").datepicker('setDate',temp_date);
+        $('#czas').timespinner( "value",(obj.ile-(obj.ile%60))/60+":"+(obj.ile%60));
+        
+        $('#dzial').val(obj.id_dzial);
+        $('#kat_'+obj.id_dzial).show();
+        $('input[name=prace][value='+obj.kat_id+']').attr('checked','checked');
+        if ($('input[name=prace][value='+obj.kat_id+']').parent().hasClass('sub'))
+          $('input[name=prace][value='+obj.kat_id+']').parent().show();
+        $('#opis').val(obj.opis_p);
+        $('#zlec').val(obj.zlec);
+        
+        $('#zad').val(obj.zad);
+        zad_change();
+        
+        if (obj.kat_id > 430 && obj.kat_id < 450){
+          if (obj.zlec.indexOf("PNU Projekt nr ") == 0){
+            // console.log(obj.zlec.substring(15));
+            if (!obj.zad) {
+              var t_pnu = obj.zlec.substring(15).split('/');
+              $("#pnu").val(t_pnu[0]);
+              $("#pnu_zad").val(t_pnu[1]);
+            }
+            $("#pnu").parent().show();
+            $("#zlec").parent().hide();
+          }					
+        }
+        $('#gotowe > .ui-button-text').text( "Edytuj" );
+      } else {
+        alert("Brak karty o podanym ID");
+        window.close();
+      }
+    } else {
+      $('#copy').hide();
+      $("#data").datepicker({ minDate: -days_back,maxDate: 0});
+      $('#kto_u').val('<?php echo $_SESSION["myuser"]["nazwa"];?>').attr('disabled', 'disabled');
+      $("#data").datepicker('setDate', new Date());
+      <?php if (isset($_REQUEST["day"])) echo 'var xday = new Date(); xday.setTime('.$_REQUEST["day"].'); $("#data").datepicker("setDate", xday);';?>
+      $('#del').hide();
+    }
+    
+    function disable_all(){
+      $("#czas").timespinner("disable");
+      $("#data").prop('disabled', 'disabled');
+      $("#dzial").prop('disabled', 'disabled');
+      $("textarea").prop('disabled', 'disabled');
+      $("input").each(function(){
+        $(this).prop('disabled','disabled');
+      });
+      $("#opis_last").prop('disabled', 'disabled');
+      $("#pnu").prop('disabled', 'disabled');
+    }
+    
+    if (sum_user_id != null && _user_id != 1 && sum_user_id != _user_id){
+      $('#copy').hide();
+      $('#gotowe').hide();
+      $('#del').hide();
+      disable_all();
+    }
 
 		function clear_err(){
 			$('input').blur(function() {$(this).css("background-color",'');});
@@ -844,10 +330,10 @@ if ( !isset( $_SESSION["myusername"] ) ){
 			$('#opis').css("background-color",'');
 		}
 
-		function find_id(id){
-			for (k in karty)
-				if (karty[k].prac_id == id)
-					return karty[k];
+		function find_id(id, _karty){
+			for (k in _karty)
+				if (_karty[k].prac_id == id)
+					return _karty[k];
 			return null;
 		}
 
@@ -867,7 +353,6 @@ if ( !isset( $_SESSION["myusername"] ) ){
 			return out;
 		}
 		
-// console.log(user_info);
 		function send(del, urlop){
 // console.log(user_info);
 			clear_err();
@@ -876,18 +361,16 @@ if ( !isset( $_SESSION["myusername"] ) ){
 			obj.kto = _user_id;
 			if (sum_user_id && _user_id == 1)
 				obj.kto = sum_user_id;
-			obj.dzial = $('#dzial').val();
+      obj.zlec = 'N/D';   
+			obj.dzial = 4;
 			if (!_l4){
 				obj.kiedy = $("#data").datepicker('getDate').getTime();
-//console.log(($('#czas').timespinner( "value") - 	+Globalize.parseDate( "00:00"))/60000);
-//			obj.ile = $('#czas').val().replace(",",".")*60;
 				obj.ile = ($('#czas').timespinner( "value") - +Globalize.parseDate( "00:00"))/60000;
-				obj.zlec = $('#zlec').val();
 			} else {
 				obj.od_kiedy = $("#data_od").datepicker('getDate').getTime();
 				obj.do_kiedy = $("#data_do").datepicker('getDate').getTime();
 			}
-			obj.co = $('input[name=prace]:checked').val();
+			obj.co = 600;
 			obj.opis = $('#opis').val();
 
 			if (del){
@@ -895,18 +378,6 @@ if ( !isset( $_SESSION["myusername"] ) ){
 			} else {
 				var now = new Date();
 				now = now.getTime()/1000;
-				
-				if (obj.dzial == null || obj.dzial == "" || obj.dzial == "null"){
-					$('#dzial').css("background-color",'red');
-					alert('Proszę wybrać dział');
-					return;
-				}
-				
-				if (!obj.co){
-					$('#kategorie').css("background-color",'red');
-					alert('Proszę wybrać kategorię prac');
-					return;
-				}
 				
 				var temp = null;
 				
@@ -948,23 +419,12 @@ if ( !isset( $_SESSION["myusername"] ) ){
 					obj.dni = out;
 				} else {
 					obj.zad = $('#zad').val();
-					// if ()
-					// console.log(user_info.dzial);
-					// if ((user_info.dzial == "TR-1" && user_info.sekcja == "AU")
-					if ((user_info.dzial == "TR-1") 
-					|| (user_info.dzial == "TR-2")
-					|| (user_info.dzial == "TR-3")
-					|| (user_info.dzial == "TP")
-					|| (true)
-					|| (user_info.id == 9)	//Marcińczyk
-					|| (user_info.id == 1)
-					){
-						if (!(obj.zad > 0)){
-							$('#zad').css("background-color",'red');
-							alert('Proszę wybrać zadanie');
-							return;
-						}
-					}
+          if (!(obj.zad > 0)){
+            $('#zad').css("background-color",'red');
+            alert('Proszę wybrać zadanie');
+            return;
+          }
+
 					if (obj.kiedy/1000 < now - (days_back+1)*86400 || obj.kiedy/1000 > now){
 						$("#data").css("background-color",'red');
 						alert("Nieprawidłowa data.");
@@ -976,112 +436,17 @@ if ( !isset( $_SESSION["myusername"] ) ){
 						alert('Proszę podać prawidłową ilość godzin');
 						return;
 					}
-/*					
-					if (obj.zlec.indexOf("900") == 0 || obj.zlec.indexOf("121") == 0){
-						$('#zlec').css("background-color",'red');
-						alert('Numer zamówienia / komisji proszę podawać w formacie "01H900xxxx"');
-						return;				
-					}				
-
-					if (obj.zlec.indexOf("93-40283") == 0 || obj.zlec.indexOf("95-80308") == 0 ){
-						$('#zlec').css("background-color",'red');
-						alert('Numer zamówienia dla kotwiarki to "01H9004259" lub "01H9004260"');
-						return;				
-					}				
-
-					if (obj.zlec.indexOf("SC_ANA") == 0){
-						$('#zlec').css("background-color",'red');
-						alert('Numer zamówienia dla SHUTTLE CAR to "01H9004249"');
-						return;				
-					}				
-
-					if (obj.zlec.indexOf("94-80010") == 0){
-						$('#zlec').css("background-color",'red');
-						alert('KSW-800 należy do "PNU Projekt nr 63"');
-						return;				
-					}				
-
-					if (obj.zlec.indexOf("ikrus") != -1){
-						$('#zlec').css("background-color",'red');
-						alert('GUŁ-500 należy do "PNU Projekt nr 71"');
-						return;				
-					}	
-
-					if (obj.co > 430 && obj.co < 450){
-						if ($("#pnu").val() == "null"){
-							$('#pnu').css("background-color",'red');
-							alert('Proszę wybrać numer projektu');
-							return;						
-						} else {
-							obj.zlec = "PNU Projekt nr "+$("#pnu").val();
-							if ($("#pnu_zad").val() > 0) obj.zlec += '/' + $('#pnu_zad').val().trim();
-							$('#zlec').val(obj.zlec);
-						}
-	//					alert('Proszę wpisać nazwę projektu w formacie "PNU Projekt nr xx"');
-	//					return;				
-					} else if (obj.zlec.indexOf("PNU") == 0 && obj.co != 451){
-						$('#zlec').css("background-color",'red');
-						alert('Dla PNU proszę wybrać kategorię "DRiW / Projekty rozwojowe wg. PNU"');
-						return;				
-					}
-					
-					if (obj.co > 400 && obj.zlec.indexOf("01H900") == 0){
-						$('#dzial').css("background-color",'red');
-						alert('Prace pod konkretną komisję / zamówienie proszę wpisywać w dziale DH');
-						return;				
-					}
-*/
-					
-					if (obj.opis == "" && obj.dzial != 5){
-						$('#opis').css("background-color",'red');
-						alert('Proszę opisać wykonane prace');
-						return;
-					}
-
-					if (!_prac_id)
-					for (var k in karty){
-						var karta = karty[k];
-						if (obj.kiedy == karta.data/1 && obj.co == karta.kat_id && obj.zlec == karta.zlec){
-							console.log(karta);
-//							console.log(karta.kart_id);
-							console.log(min_to_h2(obj.ile));
-
-							console.log((obj.ile-(obj.ile%60))/60+":"+(obj.ile%60));
-							console.log((karty[k].ile-(karty[k].ile%60))/60+":"+(karty[k].ile%60));
-							if (confirm("Podana kategoria prac dla danego dnia została już wpisana. Czy chcesz dopisać do karty ?")){
-								obj.id = karta.kart_id;
-	//console.log(karta);
-	//console.log(obj);
-	//console.log(karty[k]);			
-								if (karty[k].opis_p && karty[k].opis_p != obj.opis)
-									obj.opis = karty[k].opis_p + " (" + min_to_h2(karty[k].ile) + ")\n" + obj.opis + " (" + min_to_h2(obj.ile) + ")";
-								obj.ile = karty[k].ile/1 + obj.ile/1;
-							} else
-								return;
-						}
-					}
 				}
 
 				temp = {data:obj.kiedy,kat_id:obj.co,zlec:obj.zlec};
 				temp2 = obj;
 			}
 					
-//			console.log(temp);
-			// console.log(obj);
-			// if (urlop)
-				// console.log("urlop");
-			// else 
-				// console.log("nie urlop");
-
-//return;
-// console.log(obj);
-// console.log(del);
 			if (urlop)
 				window.open("urlop_n.php?opis="+temp2.opis+"&od="+temp2.od_kiedy/1000+"&do="+temp2.do_kiedy/1000+"&id="+sum_user_id,"_self");
 			else
 				$.ajax({
-//					url: 'http://192.168.34.17:88/scripts/karta_pr.php?callback=?',
-					url: 'karta.php?callback=?',
+					url: 'karta_sql.php?callback=?',
 					dataType: 'json',
 					type: 'POST',
 					data: obj,
@@ -1090,38 +455,14 @@ if ( !isset( $_SESSION["myusername"] ) ){
 					if (obj[0]=="OK"){
 						if (window.opener)
 							window.opener.location.reload();
-			// console.log(temp);
-						if (temp)
-							karty.push(temp);
-						if ($('#zad').val() && zadania[$('#zad').val()] && (zadania[$('#zad').val()].rbh > 0)){
-							// console.log(zadania[$('#zad').val()].rbh/1);
-							console.log(obj);
-							if (zadania[$('#zad').val()].rbh/1 < obj[5]/1) {
-								alert('Czas przeznaczony na to zadanie został przekroczony o ' + (obj[5] - zadania[$('#zad').val()].rbh).toFixed(2) + 'h.')
-							}
-						}
-						if (obj[4] > 480)
-							alert('Dzienny czas pracy przekracza 8h.')
 						if (obj[2] == "DELETE"){
 							alert(obj[3]);
 							window.close();
 						}
-						if (temp2.co == 545 && confirm( obj[3]+'\n\rCzy chcesz wydrukować kartę urlopową ?')){
-							if (temp2.od_kiedy && temp2.do_kiedy)
-								window.open("urlop_n.php?opis="+temp2.opis+"&od="+temp2.od_kiedy/1000+"&do="+temp2.do_kiedy/1000,"_self");
-								// window.open("urlop.php?opis="+temp2.opis+"&od="+temp2.od_kiedy/1000+"&do="+temp2.do_kiedy/1000+"&id="+_prac_id,"_self");
-							else
-								window.open("urlop_n.php?opis="+temp2.opis+"&od="+temp2.kiedy/1000+"&do="+temp2.kiedy/1000,"_self");
-								// window.open("urlop.php?opis="+temp2.opis+"&od="+temp2.kiedy/1000+"&do="+temp2.kiedy/1000+"&id="+_prac_id,"_self");
-						}
-						else if (<?php if (isset($_REQUEST["add"])) echo "true"; else echo "false";?>) {
+            if (<?php if (isset($_REQUEST["add"])) echo "true"; else echo "false";?>) {
 							open(location, '_self').close();
 						} else if (confirm(obj[3]+'\n\rCzy chcesz zamknąć kartę ?'))
 							window.close();
-//							window.open("lista.php","_self");
-//						else
-//							window.open("karta.php","_self");
-//							window.open("karta.php?id="+obj[1],"_self");
 					} else
 						alert('Błąd skryptu.');
 				}).fail( function() {

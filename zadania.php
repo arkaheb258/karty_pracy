@@ -191,7 +191,10 @@
 			console = {log:function(){}};
 		else if (typeof console.log === "undefined")
 			console.log = function(){};
-			
+
+    // if (_user_id == 1)
+      // my_debug = true;
+      
 		function load_zad(){
 			// console.log("load_zad");
 			// console.log($('#akt').val());
@@ -466,6 +469,9 @@
 			var ikona_nakt = "jstree-filex";
 			var ikona_fnakt = "jstree-folderx";
 			var new_node = {text:z.nazwa, id:z.id, icon:ikona_akt, a_attr:{title:z.opis, href:"zadanie.php?id="+z.id}};
+      if (typeof my_debug != 'undefined')
+        new_node.a_attr.href = "zadanie_new.php?id="+z.id;
+
 			if (z.par_id && _projekty2[z.par_id]) {
 				if (_projekty2[z.par_id].aktywny && _projekty2[z.par_id].aktywny != 1){
 					z.aktywny = _projekty2[z.par_id].aktywny;
@@ -645,13 +651,16 @@
 							action : function (obj) {
 								var text = prompt("Nazwa nowej czynności:", "nowa czynność");
 								if (text && text.length){
-									//nr zadania z rodzicow dla PNU, nr MPK lub nr komisji
+									//nr zadania z rodzicow dla PNU
+                  var url = 'zadanie.php';
+                  if (typeof my_debug != 'undefined')
+                    url = 'zadanie_new.php';
 									if ($node.id[0] == "p" && $node.id[1] != "n")
-										window.open("zadanie.php?text="+text+"&par="+$node.id.substring(1));
+										window.open(url+"?text="+text+"&par="+$node.id.substring(1));
 									else if ($node.data && $node.data.pnu)
-										window.open("zadanie.php?text="+text+"&pnu="+$node.data.pnu);
+										window.open(url+"?text="+text+"&pnu="+$node.data.pnu);
 									else 
-										window.open("zadanie.php?text="+text);							
+										window.open(url+"?text="+text);							
 								}
 							}
 						},
@@ -870,14 +879,17 @@
         if ($node.parents[0] != "p2" && $node.parents[0] != "p411" && $node.parents[0] != "p412"){
           delete items.create.submenu.template;
         } else {
+          console.log(items.create.submenu);
           if($node.id == "p54") {
             delete items.create.submenu.template;
-          } else if($node.id == "p411" || $node.parents[0] == "p411") {
+          // } else if($node.id == "p411" || $node.parents[0] == "p411") {
+          } else if($node.id == "p411") {// || $node.parents[0] == "p411") {
             items.create.submenu.template.label = "Przenośnik GROT";
-          } else if($node.id == "p412" || $node.parents[0] == "p412") {
+          // } else if($node.id == "p412" || $node.parents[0] == "p412") {
+          } else if($node.id == "p412") {// || $node.parents[0] == "p412") {
             items.create.submenu.template.label = "Przenośnik RYBNIK";
           }
-          delete items.create.submenu.create_file;
+          // delete items.create.submenu.create_file;
         }
       }
         
