@@ -49,7 +49,6 @@ if ( !isset( $_SESSION["myusername"] ) ){
   <title>Podsumowanie</title>
   </head>
 	<body style="height:100%;">
-		<div style="float:right;font-size: 0.8em;margin-right: 1em;">Zalogowano jako: <?php echo $_SESSION["myuser"]["nazwa"]; ?></div><br/>
 		Proszę wybrać dział: <select id="dzial" name="dzial"><option value="">Wszystkie</option></select><br/>
 		Proszę wybrać pracownika: <select id="user" name="user"></select><br/>
 		Proszę wybrać miesiąc: <select id="month" name="month"></select><br/>
@@ -61,13 +60,10 @@ if ( !isset( $_SESSION["myusername"] ) ){
 
 	<script type="text/javascript" src="users.php"></script>
 	<script>
-		_user_id = <?php echo $_SESSION["myuser"]["id"];?>;
-		_prac_id = <?php if (isset($_REQUEST["id"])) echo $_REQUEST["id"]; else echo 'null';?>;
-		_prac_nr = <?php if (isset($_REQUEST["nr"])) echo $_REQUEST["nr"]; else echo 'null';?>;
-		_kat_id = <?php if (isset($_REQUEST["id_k"])) echo $_REQUEST["id_k"]; else echo 'null';?>;
-		_dzia_id = <?php if (isset($_REQUEST["id_d"])) echo $_REQUEST["id_d"]; else echo 'null';?>;
-//		_filtr_dzial = "<?php if (isset($_REQUEST["dzial"])) echo $_REQUEST["dzial"]; else echo 'null';?>";
-
+  
+    var search = location.search.substring(1);
+    search = search?JSON.parse('{"' + search.replace(/&/g, '","').replace(/=/g,'":"') + '"}', function(key, value) { return key===""?value:decodeURIComponent(value) }):{};
+  
 		if (typeof console === "undefined")
 			console = {log:function(){}};
 		else if (typeof console.log === "undefined")
@@ -80,9 +76,8 @@ if ( !isset( $_SESSION["myusername"] ) ){
 				$('#user').empty();
 				$('#user').append('<option value="null" title=""></option>');
 				for (var u in users){
-					if ( users[u].dzial.indexOf('T')==-1 || users[u].dzial.indexOf('?') != -1)
+					if ( users[u].dzial.indexOf('T') !=0 || users[u].dzial.indexOf('?') != -1 || users[u].dzial.indexOf('TT') == 0)
 						continue;
-	//				if (_filtr_dzial == "null" || users[u].dzial.indexOf(_filtr_dzial) == 0)
 					if ($('#dzial').val() == "null" || users[u].dzial.indexOf($('#dzial').val()) == 0)
 						$('#user').append('<option value=\"'+users[u].id+'\" title="'+users[u].dzial+'">'+users[u].nazwa+' ('+users[u].dzial+')</option>');
 	//				console.log(jQuery.inArray(users[u].dzial,dzialy));
@@ -95,9 +90,7 @@ if ( !isset( $_SESSION["myusername"] ) ){
 			for (d in dzialy){
 				$('#dzial').append('<option value="'+dzialy[d]+'">'+dzialy[d]+'</option>');
 			}
-			
-			
-			
+      
 			var now = new Date();
 			var miesiac = ["Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec","Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"];
 			for (var m in miesiac)
@@ -117,18 +110,16 @@ if ( !isset( $_SESSION["myusername"] ) ){
 			$('#year').change(load_iframe);
 			
 			$('#dzial').change(load_users);
-
-			if (_prac_nr) {
+			if (search.nr) {
 				for (var u in users) {
-					if (users[u].nr == _prac_nr){
-						_prac_id = users[u].id;
+					if (users[u].nr == search.nr){
+						search.id = users[u].id;
 						break;
 					}
 				}
 			}
-			if (_prac_id) 
-			{
-				$('#user').val(_prac_id);
+			if (search.id) {
+				$('#user').val(search.id);
 				load_iframe()
 			}
 		});

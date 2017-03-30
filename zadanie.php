@@ -51,8 +51,9 @@
 				// echo $query;
 			}
 		} else {
+      if ($par_id != "NULL") $par_id = '"'.$par_id.'"';
 			$query = "UPDATE `kart_pr_zadania` SET "
-			."`user_id`=$kier_id,`par_id`=\"$par_id\",`nazwa`=\"$nazwa\", `opis`=\"$opis\", `aktywny`=\"$aktywny\", "
+			."`user_id`=$kier_id,`par_id`=$par_id,`nazwa`=\"$nazwa\", `opis`=\"$opis\", `aktywny`=\"$aktywny\", "
 			."`prac_wykon`=\"$prac_wykon\", `rbh`=$rbh, `termin`=$termin, `komentarz`=\"$koment\", `json`='$json' WHERE `id`=$id;";
 			if ($mysqli->query($query))
 				echo json_encode(array('OK',$id,'UPDATE','Zadanie poprawione'));
@@ -72,8 +73,8 @@
 	<head>
 		<meta http-equiv="Content-type" content="text/html; charset=utf-8" />
 		<meta http-equiv="X-UA-Compatible" content="IE=EmulateIE7; IE=EmulateIE9" /> 
-		<link rel="stylesheet" type="text/css" href="kopex.css" />
-		<link rel="stylesheet" href="style.css" />
+		<link rel="stylesheet" type="text/css" href="http://192.168.30.12/css/kopex.css" />
+		<link rel="stylesheet" href="http://192.168.30.12/js/jquery-ui.min.css" />
 		<style>
 			table{
 				background-color:#fff;
@@ -174,32 +175,49 @@
 				</table>
 		</form>
 	</body>
-	<script type="text/javascript" src="jquery.min.js"></script>
-	<script type="text/javascript" src="jquery-ui-new.min.js"></script>
-	<script type="text/javascript" src="users_zad.php"></script>
+	<script type="text/javascript" src="http://192.168.30.12/js/jquery.min.js"></script>
+	<script type="text/javascript" src="http://192.168.30.12/js/jquery-ui.min.js"></script>
+	<script type="text/javascript" src="http://192.168.30.12/karty_pracy/users_zad2.php"></script>
 	<script type="text/javascript" src="http://192.168.30.12:88/pnu.js"></script>
 	<script>
-		var _zad_id = <?php if (isset($_REQUEST["id"])) echo $_REQUEST["id"]; else echo 'null';?>;
 		var _user_id = <?php echo $_SESSION["myuser"]["id"];?>;
-		var wykon = <?php echo json_encode($wykon);?>;
     
-		var new_name = <?php if (isset($_REQUEST["text"])) echo "'".$_REQUEST["text"]."'"; else echo '""';?>;
-		var par_id = <?php if (isset($_REQUEST["par"])) echo $_REQUEST["par"]; else echo 'null';?>;
-		var par_pnu = <?php if (isset($_REQUEST["pnu"])) echo '"'.$_REQUEST["pnu"].'"'; else echo 'null';?>;
-
+    var search = location.search.substring(1);
+    search = search?JSON.parse('{"' + search.replace(/&/g, '","').replace(/=/g,'":"') + '"}', function(key, value) { return key===""?value:decodeURIComponent(value) }):{};
+                 
 		if (typeof console === "undefined")
 			console = {log:function(){}};
 		else if (typeof console.log === "undefined")
 			console.log = function(){};
 	
+    $.datepicker.regional['pl'] = {
+      closeText: 'Zamknij',
+      prevText: '&#x3c;Poprzedni',
+      nextText: 'Następny&#x3e;',
+      currentText: 'Dziś',
+      monthNames: ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec',
+      'Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'],
+      monthNamesShort: ['Sty','Lu','Mar','Kw','Maj','Cze',
+      'Lip','Sie','Wrz','Pa','Lis','Gru'],
+      dayNames: ['Niedziela','Poniedzialek','Wtorek','Środa','Czwartek','Piątek','Sobota'],
+      dayNamesShort: ['Nie','Pn','Wt','Śr','Czw','Pt','So'],
+      dayNamesMin: ['N','Pn','Wt','Śr','Cz','Pt','So'],
+      weekHeader: 'Tydz',
+      dateFormat: 'yy-mm-dd',
+      firstDay: 1,
+      isRTL: false,
+      showMonthAfterYear: false,
+      yearSuffix: ''};
+    $.datepicker.setDefaults($.datepicker.regional['pl']);
+
     //pobranie danych o projektach i zadaniach
     $.ajax({
-      url: 'baza.php?callback=?',
+      url: 'baza.php?tree=1&proj=1&callback=?',
       dataType: 'json',
       type: 'POST',
-      data: _zad_id?{zad_id:_zad_id}:null,
+      data: search.id?{zad_id:search.id}:null,
       timeout: 2000
-    }).success(function(obj){
+    }).done(function(obj){
       init(obj);
     }).fail( function() {
       console.log('Błąd pobrania danych');
@@ -211,11 +229,11 @@
       url: 'rbh.php?callback=?',
       dataType: 'json',
       type: 'POST',
-      data: {zad_id:_zad_id},
+      data: {zad_id:search.id},
       timeout: 2000
-    }).success(function(obj){
-      // console.log(obj);
-      rbh_limits = obj;
+    }).done(function(obj){
+      console.log(obj);
+      if (obj) rbh_limits = obj;
 			for (var a in rbh_limits){
 				$("#user_"+a+" .wykon").text(Math.round(rbh_limits[a].used/60) + "h")
 				$("#user_"+a+" .limit").val(Math.round(rbh_limits[a].max/60))
@@ -264,6 +282,7 @@
         window.open('sum.php?id='+$(this).data('id'));
       });
 // console.log(_user_sekcja);
+/*
       if ((us.kart_perm < _user_kart_perm) && _user_id != 1) {
         if ((us.dzial.indexOf(_user_dzial) != 0) && (_user_dzial != 'DRiW')) {
           $('#user_'+us.id+' input').attr('disabled', true);
@@ -273,6 +292,7 @@
           }
         }
       }
+*/
     }
     // console.log(users_by_id);
     // console.log(dzial_wyk_list);
@@ -305,10 +325,10 @@
       for (var oi in obj.children){
         var p = projekty[oi];
         if (p.aktywny != 1) continue;
-        // console.log(p.nazwa, p.text);
+        // console.log(p.text);
         if (p.files == 1)
           callback(p.id, parents.concat([p.text]));
-        for_each_project(projekty, obj.children[oi], parents.concat([p.v]), callback);
+        for_each_project(projekty, obj.children[oi], parents.concat([p.text]), callback);
       }
     }
     
@@ -455,10 +475,9 @@
         options.forEach(function(item, index){options[index] = '<option value="'+item.id+'" title="'+item.title+'">'+item.text+'</option>'});
         proj_opts[p.id] = options;
       }
-      
-      
-      if (_zad_id){
-        var _zadanie = obj.o_zadania[_zad_id];
+
+      if (search.id){
+        var _zadanie = obj.o_zadania[search.id];
         console.log("_zadanie", _zadanie);
         $('#zad').val(_zadanie.nazwa);
         $('#akt').val(_zadanie.aktywny);
@@ -491,16 +510,14 @@
 
         if (_zadanie.par_id > 0) {
           $('#typ').val(_zadanie.parents[_zadanie.parents.length-1]);
-          if (o_projekty[_zadanie.par_id].files == 0) {
-            $('#typ').attr('disabled', true);
+          if (o_projekty[_zadanie.par_id].files == 0 || _zadanie.par_id, o_projekty[_zadanie.par_id].aktywny != 1) {
+            // $('#typ').attr('disabled', true);
             typ_change();
-            $('#proj')
-              .html('<option value="'+_zadanie.par_id+'">'+o_projekty[_zadanie.par_id].text+'</option>')
-              .attr('disabled', true);
+            $('<option value="'+_zadanie.par_id+'">'+o_projekty[_zadanie.par_id].text+'</option>').attr('disabled', true).appendTo('#proj');
           } else {
             typ_change();
-            $('#proj').val(_zadanie.par_id);
           }
+          $('#proj').val(_zadanie.par_id);
         } else {
           $('#typ').val(0);
           typ_change();
@@ -510,18 +527,18 @@
         }
       } else {
         $('#del').hide();
-        $('#zad').val(new_name);
+        $('#zad').val(search.text);
         typ_change();
-        if (par_pnu) {
-          // console.log("par_pnu",par_pnu);
+        if (search.pnu) {
+          // console.log("par_pnu",search.pnu);
           $('#typ').val(0);
           typ_change();
-          set_pnu(par_pnu);
-        } else if (par_id) {
-          // console.log("par_id",par_id);
-          $('#typ').val(o_projekty[par_id].parents[o_projekty[par_id].parents.length-1]);
+          set_pnu(search.pnu);
+        } else if (search.par) {
+          // console.log("par_id",search.par);
+          $('#typ').val(o_projekty[search.par].parents[o_projekty[search.par].parents.length-1]);
           typ_change();
-          $('#proj').val(par_id);
+          $('#proj').val(search.par);
         }
       }
 
@@ -536,9 +553,9 @@
           url: 'zadanie.php?callback=?',
           dataType: 'json',
           type: 'POST',
-          data: {usun: _zad_id},
+          data: {usun: search.id},
           timeout: 2000
-        }).success(function(obj){
+        }).done(function(obj){
           if (obj && obj[0]=="OK"){
             if (window.opener)
               window.opener.location.reload();
@@ -625,8 +642,8 @@
       // console.log('rbh_limits_update',rbh_limits_update);
       
       obj.dodaj = 0;	
-      if (_zad_id)
-        obj.dodaj = _zad_id;	
+      if (search.id)
+        obj.dodaj = search.id;	
 
 console.log(obj);
 
@@ -636,20 +653,20 @@ console.log(obj);
         type: 'POST',
         data: obj,
         timeout: 2000
-      }).success(function(obj){
+      }).done(function(obj){
         if (obj && obj[0]=="OK"){
           if (Object.keys(rbh_limits_update).length > 0) {
             $.ajax({
               url: 'rbh.php?callback=?',
               dataType: 'json',
               type: 'POST',
-              data: {update_id: _zad_id,array:rbh_limits_update},
+              data: {update_id: search.id,array:rbh_limits_update},
               timeout: 2000
-            }).success(function(obj){
+            }).done(function(obj){
               if (obj && obj[0]=="OK"){
                 // console.log('OK');
               } else {
-                console.log(obj, {update_id: _zad_id, array: rbh_limits_update});
+                console.log(obj, {update_id: search.id, array: rbh_limits_update});
               }
             }).fail( function() {
               alert('Błąd ustawinia limitów.');

@@ -5,7 +5,7 @@
 		header("location:login.php?url=".$_SERVER["REQUEST_URI"]);
 		exit;
 	} else {
-		if ($_SESSION['timeout'] + 10 * 60 < time()) {
+		if ($_SESSION['timeout'] + 15 * 60 < time()) {
 			header("location:logout.php?session_timeout&url=".$_SERVER["REQUEST_URI"]);
 			exit;
 		} else {

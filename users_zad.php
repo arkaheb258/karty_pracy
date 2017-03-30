@@ -2,8 +2,6 @@
 	header('Content-type: application/json');
 	header('Cache-Control: no-cache, must-revalidate');
 	session_start();
-	if ( !isset( $_SESSION["myusername"] ) )
-		exit('[]');
 	require_once ('../conf.php');
 //	error_reporting(0);
 	$mysqli = new_polacz_z_baza();

@@ -73,13 +73,6 @@ if ( !isset( $_SESSION["myusername"] ) ){
 			<br/>
 			<br/>
 		</div>
-		<table border="0" class="yes_print_" style="width:100%;">
-			<tbody style="width:100%;">
-				<tr><td>Dział <?php echo $dzial; ?></td></tr>
-				<tr><td style="text-align: center; font-size: 2em; font-weight: bold;">KARTA PRACY za miesiąc <span id="druk_miesiac"></span> <span id="druk_rok"></span></td></tr>
-			</tbody>
-		</table>
-		
 		<table cellpadding="0" cellspacing="0" border="1" class="display unselectable" id="dane_sum"></table>
 			<br/>
 		<table cellpadding="0" cellspacing="0" border="0" class="display unselectable no_print_" id="dane"></table>
@@ -90,19 +83,18 @@ if ( !isset( $_SESSION["myusername"] ) ){
 		<script type="text/javascript" src="md5-min.js"></script>
     <script type="text/javascript" src="dialog.js"></script>
 <?php
+  $url = '?x=1';
 	if (isset($_REQUEST["user_id"]) && $_SESSION["myuser"]["kart_perm"] != "0")  {
-		if (isset($_REQUEST["year"]) && isset($_REQUEST["month"])) 
-			echo '<script type="text/javascript" src="baza_karta.php?user_id='.$_REQUEST["user_id"].'&month='.$_REQUEST["month"].'&year='.$_REQUEST["year"].'"></script>';
-		else	
-			echo '<script type="text/javascript" src="baza_karta.php?user_id='.$_REQUEST["user_id"].'"></script>';
-	} else {
-		if (isset($_REQUEST["month"])){
-			echo '<script type="text/javascript" src="baza_karta.php?month='.$_REQUEST["month"];
-			if (isset($_REQUEST["year"])) echo '&year='.$_REQUEST["year"];
-			echo '"></script>';
-		} else	
-			echo '<script type="text/javascript" src="baza_karta.php"></script>';
-	}
+    $url .= '&user_id='.$_REQUEST["user_id"];
+  }
+  if (isset($_REQUEST["month"])){
+    $url .= '&month='.$_REQUEST["month"];
+  }
+  if (isset($_REQUEST["year"])) {
+    $url .= '&year='.$_REQUEST["year"];
+  }
+  echo '<script type="text/javascript" src="baza_karta_new.php'.$url.'"></script>';
+  echo '<script type="text/javascript" src="swieta.php'.$url.'"></script>';
 ?>
 	<script type="text/javascript">
 		var sum_user_id = <?php if (isset($_REQUEST["user_id"])) echo $_REQUEST["user_id"]; else echo 'null';?>;
@@ -111,6 +103,17 @@ if ( !isset( $_SESSION["myusername"] ) ){
 		var suser_link = "<?php if (isset($_REQUEST["user_id"]) && $_SESSION["myuser"]["kart_perm"] != "0")  echo "?user_id=".$_REQUEST["user_id"]; ?>";
 console.log(suser_link);
 		
+    $.ajax({
+      url: 'baza.php?callback=?',
+      dataType: 'json',
+      type: 'POST',
+      timeout: 2000
+    }).success(function(obj){
+      init(obj);
+    }).fail( function() {
+      console.log('Błąd pobrania danych');
+    });		
+    
 		function min_to_h(min){
 			if (min <= 0)
 				return "00:00";
@@ -150,7 +153,7 @@ console.log(suser_link);
 		$('#add_l4').button().click(function(){ window.open("karta_l4.php"+suser_link); });
 		$('#s_user').button().click(function(){ window.open("sum.php"); });
 		$('#s_stat').button().hide().click(function(){ window.open('stat.php'+suser_link); });
-		$('#logout').button().click(function(){ window.open("logout.php?url=<?php echo $_SERVER["REQUEST_URI"]; ?>","_self"); });
+		$('#logout').button().click(function(){ window.open("logout.php?url=/karty_pracy/lista.php","_self"); });
 		$('#change_pass').button().click(function(){ $( "#dialog-form" ).dialog( "open" ); });
     
     $(dialog_pass.html('dialog-form')).appendTo('body').dialog(dialog_pass.obj('dialog-form','<?php echo $_SESSION["myuser"]["nr"];?>', '<?php echo $_SESSION["myuser"]["pass_md5"]; ?>'));      
@@ -172,6 +175,7 @@ console.log(suser_link);
 		if (_user_id == 54 	//Szweda
 			|| _user_id == 40 	//Miziak
 			|| _user_id == 33	//Janusz
+			|| _user_id == 1	//Heblinski
 		) { $('#cp_last').show(); }
 		
 		if (sum_user_id != null && sum_user_id != _user_id && _user_id != 1){
@@ -181,201 +185,247 @@ console.log(suser_link);
 			$('#_header').hide();
 		}
 
-    //dolna tabliza z pracami
-		var aDataSet = [];
-		if (karty) for (var k in karty){
-			var karta = karty[k];
-      console.log(karta);
-			var start = new Date();
-			start.setTime(karta.data);
-			if (start.getHours() == 23) start.setHours(start.getHours()+1);
-			aDataSet.push([
-				start.toISOString().split('T')[0],
-				zadania[karta.zadanie].nazwa,
-				min_to_h(karta.ile),
-				karta.opis_p,
-				karta.prac_id
-			]);
-		}
-		$(document).ready(function() {
-			oTable = $('#dane').dataTable( {
-				"aaData": aDataSet,
-				"iDisplayLength": 25,
-				"aoColumns": [
-					{ "sTitle": "Data", "sWidth":"10em" ,"sClass": "center"},
-					{ "sTitle": "Zadanie", "sWidth":"10em"},
-					{ "sTitle": "Czas", "sWidth":"4em" ,"sClass": "center"},
-					{ "sTitle": "Opis", "sWidth":"20em"}
-				],
-				"aaSorting": [[ 0, "desc" ]],
-				"fnDrawCallback": function( oSettings ) {
-					$("#dane tbody tr:not(.has_dblclick)").dblclick( function( e ) {
-						var ths = $(this); 
-						var nr = null;
-						var i = 0;
-						$("tr",$(this).parent()).each(function(){
-							if ($(this)[0] == ths[0]) nr = i;
-							i++;
-						});
-						var id = null;
-						nr += oSettings._iDisplayStart;
-						if (nr != null){
-							var l = oSettings.aoData[oSettings.aiDisplay[nr]]._aData.length;
-							id  = oSettings.aoData[oSettings.aiDisplay[nr]]._aData[l-1];
-						}
-            window.open('karta.php?id='+id+suser_link.replace('?','&'));
-					}).addClass('has_dblclick').css("cursor","pointer");
-					$("#dane tbody tr:not(.has_click)").click( function( e ) {
-						if ( $(this).hasClass('row_selected') ) {
-							$(this).removeClass('row_selected');
-						}
-						else {
-							oTable.$('tr.row_selected').removeClass('row_selected');
-							$(this).addClass('row_selected');
-						}
-					}).addClass('has_click');
-				},
-				"oLanguage":{
-					"sProcessing":   "Proszę czekać...",
-					"sLengthMenu":   "Pokaż _MENU_ pozycji",
-					"sZeroRecords":  "Nie znaleziono żadnych pasujących indeksów",
-					"sInfo":         "Pozycje od _START_ do _END_ z _TOTAL_ łącznie",
-					"sInfoEmpty":    "Pozycji 0 z 0 dostępnych",
-					"sInfoFiltered": "(filtrowanie spośród _MAX_ dostępnych pozycji)",
-					"sInfoPostFix":  "",
-					"sSearch":       "Szukaj:",
-					"sUrl":          "",
-					"oPaginate": {
-					"sFirst":    "Pierwsza",
-					"sPrevious": "Poprzednia",
-					"sNext":     "Następna",
-					"sLast":     "Ostatnia"
-					}
-				}
-			} );	
-		} );
-
-		var d = new Date();
-//		console.log(d);
-<?php if (isset($_REQUEST["month"])) echo "d.setMonth(".$_REQUEST["month"]."-1);"; ?>
-<?php if (isset($_REQUEST["year"])) echo "d.setFullYear(".$_REQUEST["year"].");"; ?>
-		var daysInMonth = new Date(d.getFullYear(),d.getMonth()+1, 0).getDate()
-		$('#dane_sum').append('<tr><th rowspan=2>L.p.</th><th rowspan=2>Zadanie</th><th colspan='+(daysInMonth)+'>Dzień miesiąca ('+miesiac[d.getMonth()]+')</th><th rowspan=2>Suma</th></tr>');
-		$("#druk_miesiac").text(miesiac[d.getMonth()].toUpperCase());
-		$("#druk_rok").text(d.getFullYear());
-		$('#dane_sum').append('<tr id="fr"></tr>');
-		for (var di=1;di<=daysInMonth;di++){
-			var th = $('<th>'+di+'</th>').appendTo('#fr');
-			if (dayOfMonth(d,di) == 0)
-				th.css("background-color","gray");
-			if (dayOfMonth(d,di) == 6)
-				th.css("background-color","lightblue");
-			if(swieta[d.getMonth()+1] && swieta[d.getMonth()+1][di])
-				th.css("background-color","LightPink ").attr("title",swieta[d.getMonth()+1][di]);
-		}
-		var suma_dni = {};
-		var suma_kat = {};
-		var zlecenia_all = {};
-		var zlec_iter = 0;
-		for (var k in karty){
-			var karta = karty[k];
-			var temp_date = new Date();
-			temp_date.setTime(karta.data);
-			if (temp_date.getHours() == 23)
-				temp_date.setHours(temp_date.getHours()+1);
-			if (d.getMonth() != temp_date.getMonth()) continue;
-			if (d.getFullYear() != temp_date.getFullYear()) continue;
-			
-      karta.zlec2 = zadania[karta.zadanie].nazwa;
-			if(zlecenia_all[karta.zlec2] == undefined)
-				zlecenia_all[karta.zlec2] = zlec_iter++;
-			if(!$('#sr_'+zlecenia_all[karta.zlec2]).length){
-				var tr = $('<tr id="sr_'+zlecenia_all[karta.zlec2]+'"><th class="lp"></th><td class="czyn">'+karta.zlec2+'</td></tr>').appendTo('#dane_sum');
-				if (_user_perm > 0) {
-					$('.czyn',tr).data('id_zad',karta.zadanie).dblclick(function(){
-						window.open('zadania.php?id='+$(this).data('id_zad'));
-					});
-				}
-        if (karta.zadanie){
-          if (zadania[karta.zadanie])
-          if (zadania[karta.zadanie].typ == "PNU"){
-            var pnu = zadania[karta.zadanie].zlecenie.split('/');
-            tr.attr('title', "PNU Projekt nr " + pnu[0] + " etap " + pnu[1] + " zadanie " + pnu[2]);
-          } else if (zadania[karta.zadanie].typ == "MPK") {
-            tr.attr('title', "MPK " + zadania[karta.zadanie].zlecenie);
-          } else {
-            tr.attr('title', zadania[karta.zadanie].zlecenie);
+    function init(obj) {
+      // console.log(obj);
+      // console.log(karty);
+      var zadania = obj.o_zadania;
+      
+      //dolna tablica z pracami
+      var aDataSet = [];
+      if (typeof karty != 'undefined') for (var k in karty){
+        var karta = karty[k];
+        // console.log(karta);
+        var start = new Date();
+        start.setTime(karta.data);
+        // console.log(start);
+        if (start.getUTCHours() == 23) start.setHours(start.getHours()+1);
+        if (start.getUTCHours() == 22) start.setHours(start.getHours()+2);
+        // console.log(start, start.toISOString().split('T')[0]);
+        
+        if (!zadania[karta.zadanie])
+          console.log(karta.zadanie);
+        else
+        aDataSet.push([
+          start.toISOString().split('T')[0],
+          zadania[karta.zadanie].nazwa,
+          min_to_h(karta.czas),
+          karta.opis,
+          karta.id
+        ]);
+      }
+      $(document).ready(function() {
+        oTable = $('#dane').dataTable( {
+          "aaData": aDataSet,
+          "iDisplayLength": 25,
+          "aoColumns": [
+            { "sTitle": "Data", "sWidth":"10em" ,"sClass": "center"},
+            { "sTitle": "Zadanie", "sWidth":"10em"},
+            { "sTitle": "Czas", "sWidth":"4em" ,"sClass": "center"},
+            { "sTitle": "Opis", "sWidth":"20em"}
+          ],
+          "aaSorting": [[ 0, "desc" ]],
+          "fnDrawCallback": function( oSettings ) {
+            $("#dane tbody tr:not(.has_dblclick)").dblclick( function( e ) {
+              var ths = $(this); 
+              var nr = null;
+              var i = 0;
+              $("tr",$(this).parent()).each(function(){
+                if ($(this)[0] == ths[0]) nr = i;
+                i++;
+              });
+              var id = null;
+              nr += oSettings._iDisplayStart;
+              if (nr != null){
+                var l = oSettings.aoData[oSettings.aiDisplay[nr]]._aData.length;
+                id  = oSettings.aoData[oSettings.aiDisplay[nr]]._aData[l-1];
+              }
+              window.open('karta.php?id='+id+suser_link.replace('?','&'));
+            }).addClass('has_dblclick').css("cursor","pointer");
+            $("#dane tbody tr:not(.has_click)").click( function( e ) {
+              if ( $(this).hasClass('row_selected') ) {
+                $(this).removeClass('row_selected');
+              }
+              else {
+                oTable.$('tr.row_selected').removeClass('row_selected');
+                $(this).addClass('row_selected');
+              }
+            }).addClass('has_click');
+          },
+          "oLanguage":{
+            "sProcessing":   "Proszę czekać...",
+            "sLengthMenu":   "Pokaż _MENU_ pozycji",
+            "sZeroRecords":  "Nie znaleziono żadnych pasujących indeksów",
+            "sInfo":         "Pozycje od _START_ do _END_ z _TOTAL_ łącznie",
+            "sInfoEmpty":    "Pozycji 0 z 0 dostępnych",
+            "sInfoFiltered": "(filtrowanie spośród _MAX_ dostępnych pozycji)",
+            "sInfoPostFix":  "",
+            "sSearch":       "Szukaj:",
+            "sUrl":          "",
+            "oPaginate": {
+            "sFirst":    "Pierwsza",
+            "sPrevious": "Poprzednia",
+            "sNext":     "Następna",
+            "sLast":     "Ostatnia"
+            }
           }
-        } else 
-          tr.attr('title', karta.zlec2);
-				
-				tr.data('id_k',karta.kat_id);
-				tr.data('id_d',karta.id_dzial);
-				for (var di=1;di<=daysInMonth;di++){
-					var td = $('<td class="sr_d" id="sr_'+di+"_"+zlecenia_all[karta.zlec2]+'"><span class="val"></span><ul class="menu" style="display:none;"></ul></td>').appendTo('#sr_'+zlecenia_all[karta.zlec2]);
-					if (dayOfMonth(d,di) == 0)
-						td.css("background-color","gray");
-					if (dayOfMonth(d,di) == 6)
-						td.css("background-color","lightblue");
-					if(swieta[d.getMonth()+1] && swieta[d.getMonth()+1][di])
-						td.css("background-color","LightPink ").attr("title",swieta[d.getMonth()+1][di]);
-				}
-			}
-			var temp2 = $('#sr_'+temp_date.getDate()+"_"+zlecenia_all[karta.zlec2]);
-			temp2.css("cursor","pointer").css("text-align","center");
-			var val = $('span',temp2).text()/1;
-			$('span',temp2).text(val+karta.czas/1);
-			var kd = new Date();
-			kd.setTime(karta.data/1+ 3*60*60*1000);
-			// $('span',temp2).text(kd.getDay());
-			var max_h_delay = 48;
-			//if(swieta[kd.getMonth()+1] && swieta[kd.getMonth()+1][kd.getDate()]) max_h_delay += 24;
-			if (kd.getDay() == 4) max_h_delay += 72;
-			if (kd.getDay() == 5) max_h_delay += 48;
-			// if (kd.getDay() > 3) max_h_delay + 48;
-			if (karta.timestamp_diff_h > max_h_delay){
-				// console.log(karta.kat_id);
-				// console.log(karta.timestamp_diff_h);
-				// console.log(kd);
-				if ((karta.kat_id != 548)
-				&&	(karta.kat_id != 545)
-				&& true) {
-					// console.log(karta.kat_id);
-					// console.log(karta.data);
-					// console.log(karta.timestamp);
-					// console.log(karta.timestamp_diff_h);
-					// console.log(kd);
-					// console.log(kd.getDay());
-					$('span',temp2).parent().css('background-color','red')
-					.attr('title','wpisano: '+karta.timestamp);
-					// $('span',temp2).parent().title('wpisano:');
-				}
-			}
-			// $('span',temp2).text((karta.timestamp_diff_h*60/24).toFixed(0));
+        } );	
+      } );
 
-			$('.menu',temp2).append('<a href="karta.php?<?php if (isset($_REQUEST["user_id"]) && $_SESSION["myuser"]["kart_perm"] != "0") echo "user_id=".$_REQUEST["user_id"]."&"; ?>id='+karta.prac_id+'" target="_blank">'+karta.opis_p+'</a><br/>');
-			var list = new Array();
-			if(temp2.data('id'))
-				list = temp2.data('id');
-			list.push(karta.prac_id);
-			temp2.data('id',list);
-			if (suma_dni[temp_date.getDate()]) {
-				suma_dni[temp_date.getDate()] += karta.czas/1;
-			} else {
-				suma_dni[temp_date.getDate()] = karta.czas/1;
-			}
-			if (suma_kat[zlecenia_all[karta.zlec2]]) {
-				suma_kat[zlecenia_all[karta.zlec2]] += karta.czas/1;
-			} else {
-				suma_kat[zlecenia_all[karta.zlec2]] = karta.czas/1;
-			}
-		}
-		$(".val").each(function(){
-			var t = $(this).text()/1;
-			if (t > 0)
-				$(this).text(min_to_h2(t));
-		});
-		
+      var d = new Date();
+  //		console.log(d);
+  <?php if (isset($_REQUEST["month"])) echo "d.setMonth(".$_REQUEST["month"]."-1);"; ?>
+  <?php if (isset($_REQUEST["year"])) echo "d.setFullYear(".$_REQUEST["year"].");"; ?>
+      var daysInMonth = new Date(d.getFullYear(),d.getMonth()+1, 0).getDate()
+      $('#dane_sum').append('<tr><th rowspan=2>L.p.</th><th rowspan=2>Zadanie</th><th colspan='+(daysInMonth)+'>Dzień miesiąca ('+miesiac[d.getMonth()]+')</th><th rowspan=2>Suma</th></tr>');
+
+      $('#dane_sum').append('<tr id="fr"></tr>');
+      for (var di=1;di<=daysInMonth;di++){
+        var th = $('<th>'+di+'</th>').appendTo('#fr');
+        if (dayOfMonth(d,di) == 0)
+          th.css("background-color","gray");
+        if (dayOfMonth(d,di) == 6)
+          th.css("background-color","lightblue");
+        if(swieta[d.getMonth()+1] && swieta[d.getMonth()+1][di])
+          th.css("background-color","LightPink ").attr("title",swieta[d.getMonth()+1][di]);
+      }
+      var suma_dni = {};
+      var suma_kat = {};
+      var zlecenia_all = {};
+      var zlec_iter = 0;
+      if (typeof karty != 'undefined')
+      for (var k in karty){
+        var karta = karty[k];
+        var temp_date = new Date();
+        temp_date.setTime(karta.data);
+        if (temp_date.getHours() == 23)
+          temp_date.setHours(temp_date.getHours()+1);
+        if (d.getMonth() != temp_date.getMonth()) continue;
+        if (d.getFullYear() != temp_date.getFullYear()) continue;
+console.log(karta.zadanie, zadania[karta.zadanie])        
+        karta.zlec2 = zadania[karta.zadanie].nazwa;
+        if(zlecenia_all[karta.zlec2] == undefined)
+          zlecenia_all[karta.zlec2] = zlec_iter++;
+        if(!$('#sr_'+zlecenia_all[karta.zlec2]).length){
+          var tr = $('<tr id="sr_'+zlecenia_all[karta.zlec2]+'"><th class="lp"></th><td class="czyn">'+karta.zlec2+'</td></tr>').appendTo('#dane_sum');
+          if (_user_perm > 0) {
+            $('.czyn',tr).data('id_zad',karta.zadanie).dblclick(function(){
+              window.open('zadania.html?id='+$(this).data('id_zad'));
+            });
+          }
+          if (karta.zadanie){
+            if (zadania[karta.zadanie])
+            if (zadania[karta.zadanie].typ == "PNU"){
+              var pnu = zadania[karta.zadanie].zlecenie.split('/');
+              tr.attr('title', "PNU Projekt nr " + pnu[0] + " etap " + pnu[1] + " zadanie " + pnu[2]);
+            } else if (zadania[karta.zadanie].typ == "MPK") {
+              tr.attr('title', "MPK " + zadania[karta.zadanie].zlecenie);
+            } else {
+              tr.attr('title', zadania[karta.zadanie].zlecenie);
+            }
+          } else 
+            tr.attr('title', karta.zlec2);
+          
+          for (var di=1;di<=daysInMonth;di++){
+            var td = $('<td class="sr_d" id="sr_'+di+"_"+zlecenia_all[karta.zlec2]+'"><span class="val"></span><ul class="menu" style="display:none;"></ul></td>').appendTo('#sr_'+zlecenia_all[karta.zlec2]);
+            if (dayOfMonth(d,di) == 0)
+              td.css("background-color","gray");
+            if (dayOfMonth(d,di) == 6)
+              td.css("background-color","lightblue");
+            if(swieta[d.getMonth()+1] && swieta[d.getMonth()+1][di])
+              td.css("background-color","LightPink ").attr("title",swieta[d.getMonth()+1][di]);
+          }
+        }
+        var temp2 = $('#sr_'+temp_date.getDate()+"_"+zlecenia_all[karta.zlec2]);
+        temp2.css("cursor","pointer").css("text-align","center");
+        var val = $('span',temp2).text()/1;
+        $('span',temp2).text(val+karta.czas/1);
+        //oznaczenie op 
+        var kd = new Date();
+        kd.setTime(karta.data/1+ 3*60*60*1000);
+        var max_h_delay = 72;
+        if (kd.getDay() == 4) max_h_delay += 48;
+        if (kd.getDay() == 5) max_h_delay += 48;
+        if (karta.zwloka > max_h_delay){
+        console.log(karta.zwloka, karta);
+          if ((karta.kat_id != 548)
+          &&	(karta.kat_id != 545)
+          &&	(karta.zadanie != 504)
+          &&	(karta.zadanie != 507)
+          && true) {
+            // console.log(kd.getDay());
+            $('span',temp2).parent().css('background-color','red')
+            .attr('title','wpisano: '+karta.timestamp);
+          }
+        }
+        // $('.menu',temp2).append('<a href="karta.php?<?php if (isset($_REQUEST["user_id"]) && $_SESSION["myuser"]["kart_perm"] != "0") echo "user_id=".$_REQUEST["user_id"]."&"; ?>id='+karta.id+'" target="_blank">'+karta.opis+'</a><br/>');
+        var list = new Array();
+        if(temp2.data('id'))
+          list = temp2.data('id');
+        if (!karta.opis) karta.opis = '...Brak opisu...';
+          
+        list.push({id:karta.id,opis:karta.opis});
+        temp2.data('id',list);
+        if (suma_dni[temp_date.getDate()]) {
+          suma_dni[temp_date.getDate()] += karta.czas/1;
+        } else {
+          suma_dni[temp_date.getDate()] = karta.czas/1;
+        }
+        if (suma_kat[zlecenia_all[karta.zlec2]]) {
+          suma_kat[zlecenia_all[karta.zlec2]] += karta.czas/1;
+        } else {
+          suma_kat[zlecenia_all[karta.zlec2]] = karta.czas/1;
+        }
+      }
+      $(".val").each(function(){
+        var t = $(this).text()/1;
+        if (t > 0)
+          $(this).text(min_to_h2(t));
+      });
+      
+      $('#dane_sum').append('<tr id="lr"><th>Suma</th><th></th></tr>');
+      for (var di=1;di<=daysInMonth;di++){
+        var td = $('<th id="sr_sum_'+di+'"></th>').appendTo('#lr');
+        if (dayOfMonth(d,di) == 0)
+          td.css("background-color","gray");
+        if (dayOfMonth(d,di) == 6)
+          td.css("background-color","lightblue");
+        if(swieta[d.getMonth()+1] && swieta[d.getMonth()+1][di])
+          td.css("background-color","LightPink ").attr("title",swieta[d.getMonth()+1][di]);
+      }
+      
+      for (var s in suma_dni){
+        $('#sr_sum_'+s).text(min_to_h2(suma_dni[s]));
+        if (suma_dni[s]<480)
+          $('#sr_sum_'+s).css("background-color","yellow");
+        if (suma_dni[s]>480){
+          $('#sr_sum_'+s).css("background-color","yellow");
+        }
+      }
+      
+      var suma_sum = 0;
+      var lp = 1;
+      $('.lp').each(function(){
+        $(this).text(	lp++);
+      });
+      for (var s in suma_kat){
+        $('#sr_'+s).append('<th>'+min_to_h2(suma_kat[s])+'</th>');
+        if (s.indexOf("558")!=0)
+          suma_sum += suma_kat[s];
+      }
+      $('#lr').append('<th>'+min_to_h2(suma_sum)+'</th>');
+      
+      $( ":data(id)" ).click(function(){
+        var id = $(this).data( "id" );
+        var html = '';
+        for (var i in id) {
+          html += '<a href="karta.php?<?php if (isset($_REQUEST["user_id"]) && $_SESSION["myuser"]["kart_perm"] != "0") echo "user_id=".$_REQUEST["user_id"]."&"; ?>id='+id[i].id+'" target="_blank">'+id[i].opis+'</a><br/>'
+        }
+        // $('#dialog_prace').html($('.menu',this).html());
+        $('#dialog_prace').html(html);
+        $('#dialog_prace').dialog('open');
+      });
+    }
+    
 		$('#dialog_prace')
 		.dialog({
 			autoOpen: false,
@@ -385,59 +435,12 @@ console.log(suser_link);
 				}
 			}			
 		});
-		$( ":data(id)" ).click(function(){
-			var id = $(this).data( "id" );
-			$('#dialog_prace').html($('.menu',this).html());
-			$('#dialog_prace').dialog('open');
-		});
-
-		$( ".sr_d" ).click(function(){
-			var id = $(this).data( "id" );
-			if(id){
-//				$('.menu',this).show();
-//				window.open('karta.php?id='+id[0]);
-			} else
-				window.open('karta.php?id_k='+$(this).parent().data('id_k')+'&id_d='+$(this).parent().data('id_d'));
-//console.log(id);
-//			alert($(this).data( "id" ));
-		});
-		
-		$('#dane_sum').append('<tr id="lr"><th>Suma</th><th></th></tr>');
-		for (var di=1;di<=daysInMonth;di++){
-			var td = $('<th id="sr_sum_'+di+'"></th>').appendTo('#lr');
-			if (dayOfMonth(d,di) == 0)
-				td.css("background-color","gray");
-			if (dayOfMonth(d,di) == 6)
-				td.css("background-color","lightblue");
-			if(swieta[d.getMonth()+1] && swieta[d.getMonth()+1][di])
-				td.css("background-color","LightPink ").attr("title",swieta[d.getMonth()+1][di]);
-		}
-
-		for (var s in suma_dni){
-			$('#sr_sum_'+s).text(min_to_h2(suma_dni[s]));
-      if (suma_dni[s]<480)
-        $('#sr_sum_'+s).css("background-color","yellow");
-      if (suma_dni[s]>480){
-        $('#sr_sum_'+s).css("background-color","yellow");
-      }
-		}
-		
-		var suma_sum = 0;
-		var lp = 1;
-		$('.lp').each(function(){
-			$(this).text(	lp++);
-		});
-		for (var s in suma_kat){
-			$('#sr_'+s).append('<th>'+min_to_h2(suma_kat[s])+'</th>');
-			if (s.indexOf("558")!=0)
-				suma_sum += suma_kat[s];
-		}
-		$('#lr').append('<th>'+min_to_h2(suma_sum)+'</th>');
 		
 		if(_user_perm>0){
 			$('#s_user').show();
+			$('#s_stat').show();
 			$('#s_zad').button().show().click(function(){
-				window.open("zadania.php");
+				window.open("zadania.html");
 			});
 		}
 		
